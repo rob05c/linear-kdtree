@@ -7,8 +7,8 @@
 const location_t location_t_max = ~0ULL;
 
 void lqt_delete(struct linear_quadtree q) {
-  free(q.locations);
-  free(q.points);
+  delete[] q.locations;
+  delete[] q.points;
 }
 
 /// @param points points to construct a quadtree from. Takes ownership. MUST be dynamically allocated
@@ -39,7 +39,7 @@ struct linear_quadtree lqt_nodify(lqt_point* points, size_t len,
   *depth = LINEAR_QUADTREE_DEPTH;
 
   struct linear_quadtree lqt;
-  lqt.locations = (location_t*) malloc(sizeof(location_t) * len);
+  lqt.locations = new location_t[len];
   memset(lqt.locations, 0, sizeof(location_t) * len);
   lqt.points = points;
   lqt.length = len;
@@ -79,7 +79,7 @@ struct rs_list {
 };
 /// @todo determine if a location pointer is faster
 void rs_list_insert(struct rs_list* l, const location_t location, const lqt_point* point) {
-  struct rs_list_node* n = (struct rs_list_node*)malloc(sizeof(struct rs_list_node));
+  struct rs_list_node* n = new rs_list_node;
   n->location = location;
   n->point    = *point;
   n->next     = NULL;
@@ -100,7 +100,7 @@ void rs_list_clear(struct rs_list* l) {
   for(struct rs_list_node* node = l->head; node;) {
     struct rs_list_node* toDelete = node;
     node = node->next;
-    free(toDelete);
+    delete toDelete;
   }
   l->head = NULL;
   l->tail = NULL;
@@ -181,12 +181,12 @@ void lqt_print_nodes(struct linear_quadtree lqt, const bool verbose) {
 
 /// copies the tree from the source into destination.
 /// caller takes ownership of destination, and must call delete_linear_quadtree()
-/// does not free destination, if destination is an allocated quadtree. Call delete_linear_quadtree(destination) first.
+/// does not delete destination, if destination is an allocated quadtree. Call delete_linear_quadtree(destination) first.
 void lqt_copy(struct linear_quadtree* destination, struct linear_quadtree* source) {
   destination->length = source->length;
-  destination->locations = (location_t*) malloc(destination->length * sizeof(location_t));
+  destination->locations = new location_t[destination->length];
   memcpy(destination->locations, source->locations, source->length * sizeof(location_t));
-  destination->points = (lqt_point*) malloc(destination->length * sizeof(lqt_point));
+  destination->points = new lqt_point[destination->length];
   memcpy(destination->points, source->points, source->length * sizeof(lqt_point));
 }
 
@@ -195,7 +195,7 @@ void lqt_copy(struct linear_quadtree* destination, struct linear_quadtree* sourc
 ///
 
 void lqt_delete_unified(struct linear_quadtree_unified q) {
-  free(q.nodes);
+  delete[] q.nodes;
 }
 
 #undef ENDIANSWAP
@@ -477,9 +477,9 @@ linear_kdtree lkt_create(lqt_point* points, size_t len) {
 
   fprintf(stderr, "lkt_create depth %lu\n", (size_t)depth);
   fprintf(stderr, "lkt_create split_points_len %lu\n", (size_t)tree.split_points_len);
-  fprintf(stderr, "lkt_create mallocing split_points size %lu\n", sizeof(lkt_split_point) * tree.split_points_len);
-  tree.split_points = (lkt_split_point*) malloc(sizeof(lkt_split_point) * tree.split_points_len);
-  fprintf(stderr, "lkt_create malloced split_points\n");
+  fprintf(stderr, "lkt_create newing split_points size %lu\n", sizeof(lkt_split_point) * tree.split_points_len);
+  tree.split_points = new lkt_split_point[tree.split_points_len];
+  fprintf(stderr, "lkt_create newed split_points\n");
   tree.split_depth = depth;
   memset(tree.split_points, '\0', sizeof(lkt_split_point) * tree.split_points_len); // debug
 
@@ -507,7 +507,7 @@ mortoncode_t* lkt_create_mortoncodes(lqt_point* points, size_t len, lkt_split_po
 
   fprintf(stderr, "lkt_create_mortoncodes len %lu, split_points_len %lu, split_depth %lu\n", len, split_points_len, split_depth);
 
-  mortoncode_t* codes = (mortoncode_t*) malloc(sizeof(mortoncode_t) * len);
+  mortoncode_t* codes = new mortoncode_t[len];
 
   for(size_t i = 0, end = len; i != end; ++i) { /// \todo vectorize
     mortoncode_t code = 0;
