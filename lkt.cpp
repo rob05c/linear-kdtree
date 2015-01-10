@@ -6,14 +6,14 @@
 
 const location_t location_t_max = ~0ULL;
 
-void lqt_delete(struct linear_quadtree q) {
+void lqt_delete(linear_quadtree q) {
   delete[] q.locations;
   delete[] q.points;
 }
 
-/// @param points points to construct a quadtree from. Takes ownership. MUST be dynamically allocated
+/// @param points points to cona quadtree from. Takes ownership. MUST be dynamically allocated
 /// @return linear quadtree. Caller takes ownership and must call lqt_delete()
-struct linear_quadtree lqt_create(lqt_point* points, size_t len, 
+linear_quadtree lqt_create(lqt_point* points, size_t len, 
              ord_t xstart, ord_t xend, 
              ord_t ystart, ord_t yend,
              size_t* depth) {
@@ -32,13 +32,13 @@ struct linear_quadtree lqt_create(lqt_point* points, size_t len,
  *
  * @return a new unsorted linear_quadtree. caller takes ownership, and must call lqt_delete()
  */
-struct linear_quadtree lqt_nodify(lqt_point* points, size_t len, 
+linear_quadtree lqt_nodify(lqt_point* points, size_t len, 
              ord_t xstart, ord_t xend, 
              ord_t ystart, ord_t yend,
              size_t* depth) {
   *depth = LINEAR_QUADTREE_DEPTH;
 
-  struct linear_quadtree lqt;
+  linear_quadtree lqt;
   lqt.locations = new location_t[len];
   memset(lqt.locations, 0, sizeof(location_t) * len);
   lqt.points = points;
@@ -71,15 +71,15 @@ struct linear_quadtree lqt_nodify(lqt_point* points, size_t len,
 struct rs_list_node {
   location_t           location;
   lqt_point     point;
-  struct rs_list_node* next;
+  rs_list_node* next;
 };
 struct rs_list {
-  struct rs_list_node* head;
-  struct rs_list_node* tail;
+  rs_list_node* head;
+  rs_list_node* tail;
 };
 /// @todo determine if a location pointer is faster
-void rs_list_insert(struct rs_list* l, const location_t location, const lqt_point* point) {
-  struct rs_list_node* n = new rs_list_node;
+void rs_list_insert(rs_list* l, const location_t location, const lqt_point* point) {
+  rs_list_node* n = new rs_list_node;
   n->location = location;
   n->point    = *point;
   n->next     = NULL;
@@ -92,13 +92,13 @@ void rs_list_insert(struct rs_list* l, const location_t location, const lqt_poin
   l->tail->next = n;
   l->tail = n;
 }
-void rs_list_init(struct rs_list* l) {
+void rs_list_init(rs_list* l) {
   l->head = NULL;
   l->tail = NULL;
 }
-void rs_list_clear(struct rs_list* l) {
-  for(struct rs_list_node* node = l->head; node;) {
-    struct rs_list_node* toDelete = node;
+void rs_list_clear(rs_list* l) {
+  for(rs_list_node* node = l->head; node;) {
+    rs_list_node* toDelete = node;
     node = node->next;
     delete toDelete;
   }
@@ -111,8 +111,8 @@ void rs_list_clear(struct rs_list* l) {
 #define MULT_WILL_OVERFLOW(a, b, typemax) ((b) > (typemax) / (a))
 
 // radix sort an unsorted quadtree
-struct linear_quadtree lqt_sortify(struct linear_quadtree lqt) {
-  struct rs_list buckets[BASE];
+linear_quadtree lqt_sortify(linear_quadtree lqt) {
+  rs_list buckets[BASE];
   for(int i = 0, end = BASE; i != end; ++i) 
     rs_list_init(&buckets[i]);
 
@@ -130,7 +130,7 @@ struct linear_quadtree lqt_sortify(struct linear_quadtree lqt) {
 
     // merge buckets back into list
     for(int k = i = 0; i < BASE; rs_list_clear(&buckets[i++])) {
-      for(struct rs_list_node* j = buckets[i].head; j != NULL; j = j->next) {
+      for(rs_list_node* j = buckets[i].head; j != NULL; j = j->next) {
         lqt.locations[k] = j->location;
         lqt.points[k]    = j->point;
         ++k;
@@ -165,7 +165,7 @@ void lqt_print_node(const location_t* location, const lqt_point* point, const bo
  * @param len the number of nodes in the quadtree
  * @param depth the depth of the quadtree.
  */
-void lqt_print_nodes(struct linear_quadtree lqt, const bool verbose) {
+void lqt_print_nodes(linear_quadtree lqt, const bool verbose) {
   printf("linear quadtree: \n");
   if(verbose) {
     for(size_t i = 0, end = sizeof(location_t); i != end; ++i)
@@ -182,7 +182,7 @@ void lqt_print_nodes(struct linear_quadtree lqt, const bool verbose) {
 /// copies the tree from the source into destination.
 /// caller takes ownership of destination, and must call delete_linear_quadtree()
 /// does not delete destination, if destination is an allocated quadtree. Call delete_linear_quadtree(destination) first.
-void lqt_copy(struct linear_quadtree* destination, struct linear_quadtree* source) {
+void lqt_copy(linear_quadtree* destination, linear_quadtree* source) {
   destination->length = source->length;
   destination->locations = new location_t[destination->length];
   memcpy(destination->locations, source->locations, source->length * sizeof(location_t));
@@ -194,7 +194,7 @@ void lqt_copy(struct linear_quadtree* destination, struct linear_quadtree* sourc
 /// unified
 ///
 
-void lqt_delete_unified(struct linear_quadtree_unified q) {
+void lqt_delete_unified(linear_quadtree_unified q) {
   delete[] q.nodes;
 }
 

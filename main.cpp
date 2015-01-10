@@ -62,8 +62,7 @@ static inline void test_many(const size_t len, const size_t threads) {
   {
     printf("creating nodes...\n");
     size_t depth;
-    struct linear_quadtree lqt = lqt_nodify(points, len, 
-                                                     min, max, min, max, &depth);
+    linear_quadtree lqt = lqt_nodify(points, len, min, max, min, max, &depth);
     printf("sorting...\n");
     lqt_sortify(lqt);
     printf("\ndone\n");
@@ -74,7 +73,7 @@ static inline void test_many(const size_t len, const size_t threads) {
   {
     printf("cuda creating nodes...\n");
     size_t depth;
-    struct linear_quadtree lqt = lqt_nodify_cuda(points, len, min, max, min, max, &depth);
+    linear_quadtree lqt = lqt_nodify_cuda(points, len, min, max, min, max, &depth);
     printf("cuda sorting...\n");
     lqt_sortify_cuda(lqt);
     printf("\ncuda done\n");
@@ -134,7 +133,7 @@ static inline void test_few(const size_t len, const size_t threads) {
   {
     printf("creating nodes...\n");
     size_t depth;
-    struct linear_quadtree lqt = lqt_nodify(points, len, 
+    linear_quadtree lqt = lqt_nodify(points, len, 
                                         min, max, min, max, &depth);
     printf("sorting...\n");
     lqt_sortify(lqt);
@@ -146,7 +145,7 @@ static inline void test_few(const size_t len, const size_t threads) {
   {
     printf("cuda creating nodes...\n");
     size_t depth;
-    struct linear_quadtree lqt = lqt_nodify_cuda(points, len, 
+    linear_quadtree lqt = lqt_nodify_cuda(points, len, 
                                              min, max, min, max, &depth);
     printf("cuda sorting...\n");
     lqt_sortify_cuda(lqt);
@@ -171,7 +170,7 @@ static inline void test_time(const size_t numPoints, const size_t threads) {
   size_t depth;
   printf("cpu nodify...\n");
   const clock_t start = clock();
-  struct linear_quadtree lqt = lqt_nodify(points, numPoints, 
+  linear_quadtree lqt = lqt_nodify(points, numPoints, 
                                       min, max, min, max, &depth);
   const clock_t end = clock();
   const double elapsed_s = (end - start) / (double)CLOCKS_PER_SEC;
@@ -190,7 +189,7 @@ static inline void test_time(const size_t numPoints, const size_t threads) {
 
   printf("gpu nodify...\n");
   const clock_t start_cuda = clock();
-  struct linear_quadtree cuda_lqt = lqt_nodify_cuda(cuda_points, numPoints, 
+  linear_quadtree cuda_lqt = lqt_nodify_cuda(cuda_points, numPoints, 
                                                 min, max, min, max, &depth);
   const clock_t end_cuda = clock();
   const double elapsed_s_cuda = (end_cuda - start_cuda) / (double)CLOCKS_PER_SEC;
@@ -215,9 +214,9 @@ static inline void test_sorts(const size_t numPoints, const size_t threads) {
 
   printf("creating nodes...\n");
   size_t depth;
-  struct linear_quadtree qt = lqt_nodify(points, numPoints, 
+  linear_quadtree qt = lqt_nodify(points, numPoints, 
                                             min, max, min, max, &depth);
-  struct linear_quadtree qt_cuda;
+  linear_quadtree qt_cuda;
   lqt_copy(&qt_cuda, &qt);
 
   printf("sorting...\n");
@@ -248,9 +247,9 @@ static inline void test_sort_time(const size_t numPoints, const size_t threads) 
 
   printf("creating nodes...\n");
   size_t depth;
-  struct linear_quadtree qt = lqt_nodify(points, numPoints, 
+  linear_quadtree qt = lqt_nodify(points, numPoints, 
                                      min, max, min, max, &depth);
-  struct linear_quadtree qt_cuda;
+  linear_quadtree qt_cuda;
   lqt_copy(&qt_cuda, &qt);
 
   printf("sorting...\n");
@@ -291,10 +290,10 @@ static inline void test_unified_sorts(const size_t numPoints, const size_t threa
 
   printf("creating quadtree...\n");
   size_t depth;
-  struct linear_quadtree qt = lqt_create(points, numPoints, 
+  linear_quadtree qt = lqt_create(points, numPoints, 
                                          min, max, min, max, &depth);
   printf("creating quadtree with CUDA...\n");
-  struct linear_quadtree qt_cuda = lqt_create_cuda(points_cuda, numPoints, 
+  linear_quadtree qt_cuda = lqt_create_cuda(points_cuda, numPoints, 
                                                    min, max, min, max, &depth);
   printf("nodes:\n");
   lqt_print_nodes(qt, false);
@@ -323,7 +322,7 @@ static inline void test_unified(const size_t numPoints, const size_t threads) {
   printf("creating quadtree...\n");
   const clock_t start = clock();
   size_t depth;
-  struct linear_quadtree qt = lqt_create(points, numPoints, 
+  linear_quadtree qt = lqt_create(points, numPoints, 
                                          min, max, min, max, &depth);
   const clock_t end = clock();
   const double elapsed_s = (end - start) / (double)CLOCKS_PER_SEC;
@@ -332,7 +331,7 @@ static inline void test_unified(const size_t numPoints, const size_t threads) {
 
   printf("creating quadtree with CUDA...\n");
   const clock_t start_cuda = clock();
-  struct linear_quadtree qt_cuda = lqt_create_cuda(points_cuda, numPoints, 
+  linear_quadtree qt_cuda = lqt_create_cuda(points_cuda, numPoints, 
                                                    min, max, min, max, &depth);
   const clock_t end_cuda = clock();
   const double elapsed_s_cuda = (end_cuda - start_cuda) / (double)CLOCKS_PER_SEC;
@@ -363,7 +362,7 @@ static inline void test_heterogeneous(const size_t numPoints, const size_t threa
   printf("creating quadtree...\n");
   const clock_t start = clock();
   size_t depth;
-  struct linear_quadtree_unified qt = lqt_create_heterogeneous(points, numPoints, min, max, min, max, &depth, threads);
+  linear_quadtree_unified qt = lqt_create_heterogeneous(points, numPoints, min, max, min, max, &depth, threads);
 
   const clock_t end = clock();
   const double elapsed_s = (end - start) / (double)CLOCKS_PER_SEC;
@@ -499,8 +498,8 @@ struct app_arguments {
   size_t      threads;
 };
 
-static struct app_arguments parseArgs(const int argc, const char** argv) {
-  struct app_arguments args;
+static app_arguments parseArgs(const int argc, const char** argv) {
+  app_arguments args;
   args.success = false;
 
   if(argc < 1)
@@ -539,7 +538,7 @@ static void print_usage(const char* app_name) {
 int main(const int argc, const char** argv) {
   srand(44); // constant seed for debugging
 
-  const struct app_arguments args = parseArgs(argc, argv);
+  const app_arguments args = parseArgs(argc, argv);
   if(!args.success) {
     print_usage(args.app_name);
     return 0;
