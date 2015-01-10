@@ -49,7 +49,7 @@ static inline void test_endian_2(const size_t len, const size_t threads) {
 
 static inline void test_many(const size_t len, const size_t threads) {
   printf("test_many\n");
-  lqt_point* points = malloc(len * sizeof(lqt_point));
+  lqt_point* points = (lqt_point*) malloc(len * sizeof(lqt_point));
   const size_t min = 1000;
   const size_t max = 1100;
   printf("creating points...\n");
@@ -120,7 +120,7 @@ static inline void test_endian(const size_t len, const size_t threads) {
 
 static inline void test_few(const size_t len, const size_t threads) {
   printf("test_few\n");
-  lqt_point* points = malloc(len * sizeof(lqt_point));
+  lqt_point* points = (lqt_point*) malloc(len * sizeof(lqt_point));
   const ord_t min = 0.0;
   const ord_t max = 300.0;
   printf("creating points...\n");
@@ -158,7 +158,7 @@ static inline void test_few(const size_t len, const size_t threads) {
 
 static inline void test_time(const size_t numPoints, const size_t threads) {
   printf("test_time\n");
-  lqt_point* points = malloc(sizeof(lqt_point) * numPoints);
+  lqt_point* points = (lqt_point*) malloc(sizeof(lqt_point) * numPoints);
   const size_t min = 1000;
   const size_t max = 1100;
   printf("creating points...\n");
@@ -180,7 +180,7 @@ static inline void test_time(const size_t numPoints, const size_t threads) {
   // lqt and points not valid henceforth and hereafter.
 
   printf("creating cuda points...\n");
-  lqt_point* cuda_points = malloc(sizeof(lqt_point) * numPoints);
+  lqt_point* cuda_points = (lqt_point*) malloc(sizeof(lqt_point) * numPoints);
   printf("creating points...\n");
   for(int i = 0, end = numPoints; i != end; ++i) {
     cuda_points[i].x = uniformFrand(min, max);
@@ -203,7 +203,7 @@ static inline void test_time(const size_t numPoints, const size_t threads) {
 static inline void test_sorts(const size_t numPoints, const size_t threads) {
   printf("test_sorts\n");
 
-  lqt_point* points = malloc(numPoints * sizeof(lqt_point));
+  lqt_point* points = (lqt_point*) malloc(numPoints * sizeof(lqt_point));
   const size_t min = 1000;
   const size_t max = 1100;
   printf("creating points...\n");
@@ -236,7 +236,7 @@ static inline void test_sorts(const size_t numPoints, const size_t threads) {
 
 static inline void test_sort_time(const size_t numPoints, const size_t threads) {
   printf("test_sort_time\n");
-  lqt_point* points = malloc(sizeof(lqt_point) * numPoints);
+  lqt_point* points = (lqt_point*) malloc(sizeof(lqt_point) * numPoints);
   const size_t min = 1000;
   const size_t max = 1100;
   printf("creating points...\n");
@@ -275,7 +275,7 @@ static inline void test_sort_time(const size_t numPoints, const size_t threads) 
 
 static inline void test_unified_sorts(const size_t numPoints, const size_t threads) {
   printf("test_unified_sorts\n");
-  lqt_point* points = malloc(sizeof(lqt_point) * numPoints);
+  lqt_point* points = (lqt_point*) malloc(sizeof(lqt_point) * numPoints);
   const size_t min = 1000;
   const size_t max = 1100;
   printf("creating points...\n");
@@ -284,7 +284,7 @@ static inline void test_unified_sorts(const size_t numPoints, const size_t threa
     points[i].y = uniformFrand(min, max);
     points[i].key = i;
   }
-  lqt_point* points_cuda = malloc(numPoints * sizeof(lqt_point));
+  lqt_point* points_cuda = (lqt_point*) malloc(numPoints * sizeof(lqt_point));
   memcpy(points_cuda, points, numPoints * sizeof(lqt_point));
 
   printf("points: %lu\n", numPoints);
@@ -307,7 +307,7 @@ static inline void test_unified_sorts(const size_t numPoints, const size_t threa
 
 static inline void test_unified(const size_t numPoints, const size_t threads) {
   printf("test_unified\n");
-  lqt_point* points = malloc(sizeof(lqt_point) * numPoints);
+  lqt_point* points = (lqt_point*) malloc(sizeof(lqt_point) * numPoints);
   const size_t min = 1000;
   const size_t max = 1100;
   printf("creating points...\n");
@@ -316,7 +316,7 @@ static inline void test_unified(const size_t numPoints, const size_t threads) {
     points[i].y = uniformFrand(min, max);
     points[i].key = i;
   }
-  lqt_point* points_cuda = malloc(numPoints * sizeof(lqt_point));
+  lqt_point* points_cuda = (lqt_point*) malloc(numPoints * sizeof(lqt_point));
   memcpy(points_cuda, points, numPoints * sizeof(lqt_point));
 
   printf("points: %lu\n", numPoints);
@@ -347,7 +347,7 @@ static inline void test_unified(const size_t numPoints, const size_t threads) {
 
 static inline void test_heterogeneous(const size_t numPoints, const size_t threads) {
   printf("test_unified\n");
-  lqt_point* points = malloc(sizeof(lqt_point) * numPoints);
+  lqt_point* points = (lqt_point*) malloc(sizeof(lqt_point) * numPoints);
   const size_t min = 1000;
   const size_t max = 1100;
   printf("creating points...\n");
@@ -356,7 +356,7 @@ static inline void test_heterogeneous(const size_t numPoints, const size_t threa
     points[i].y = uniformFrand(min, max);
     points[i].key = i;
   }
-  lqt_point* points_cuda = malloc(numPoints * sizeof(lqt_point));
+  lqt_point* points_cuda = (lqt_point*) malloc(numPoints * sizeof(lqt_point));
   memcpy(points_cuda, points, numPoints * sizeof(lqt_point));
 
   printf("points: %lu\n", numPoints);
@@ -405,7 +405,7 @@ static inline void print_splitpoints(lkt_split_point* points, const size_t len) 
 
 /// \return an array of len points. Caller takes ownership, and must call free
 static inline lqt_point* create_points(const size_t len, const ord_t min, const ord_t max) {
-  lqt_point* points = malloc(sizeof(lqt_point) * len);
+  lqt_point* points = (lqt_point*) malloc(sizeof(lqt_point) * len);
   for(int i = 0, end = len; i != end; ++i) {
     points[i].x = uniformFrand(min, max);
     points[i].y = uniformFrand(min, max);

@@ -39,7 +39,7 @@ struct linear_quadtree lqt_nodify(lqt_point* points, size_t len,
   *depth = LINEAR_QUADTREE_DEPTH;
 
   struct linear_quadtree lqt;
-  lqt.locations = malloc(sizeof(location_t) * len);
+  lqt.locations = (location_t*) malloc(sizeof(location_t) * len);
   memset(lqt.locations, 0, sizeof(location_t) * len);
   lqt.points = points;
   lqt.length = len;
@@ -118,7 +118,7 @@ struct linear_quadtree lqt_sortify(struct linear_quadtree lqt) {
 
   const location_t max = location_t_max; ///< @todo pass max? iterate to find?
 
-  int i;
+  size_t i;
   for(location_t n = 1; max / n > 0; n *= BASE) {
     // sort list of numbers into buckets
     for(i = 0; i < lqt.length; ++i) {
@@ -305,24 +305,24 @@ size_t quicksort_partition(lqt_point* points, const size_t len, const ord_t pivo
   if(len == 0)
     return 0;
 
-  int i = 0;
-  int j = len - 1;
+  long i = 0;
+  long j = len - 1;
 
-  fprintf(stderr, "quicksort_partitioned i %d j %d\n", i, j);
+  fprintf(stderr, "quicksort_partitioned i %ld j %ld\n", i, j);
 
   /// we duplicate the loops rather than check inside, for efficiency
   if(xaxis) {
     while(i < j) {
-      for(; points[i].x < pivot_value && i < len; ++i);
-      if(i >= len)
+      for(; points[i].x < pivot_value && i < (long)len; ++i);
+      if(i >= (long)len)
         break;
       for(; points[j].x > pivot_value && j > -1; --j);
       if(j <= 0)
         break;
-      fprintf(stderr, "quicksort_partitioned swapping i %d j %d\n", i, j);
+      fprintf(stderr, "quicksort_partitioned swapping i %ld j %ld \n", i, j);
       lkt_swap(&points[i], &points[j]);
     }
-    fprintf(stderr, "quicksort_partitioned finished i %d j %d\n", i, j);
+    fprintf(stderr, "quicksort_partitioned finished i %ld j %ld\n", i, j);
 
     // swap i,j such that j is the greater
     if(i > j) {
@@ -342,16 +342,16 @@ size_t quicksort_partition(lqt_point* points, const size_t len, const ord_t pivo
     }
   } else {
     while(i < j) {
-      for(; points[i].y < pivot_value && i < len; ++i);
-      if(i >= len)
+      for(; points[i].y < pivot_value && i < (long)len; ++i);
+      if(i >= (long)len)
         break;
       for(; points[j].y > pivot_value && j > -1; --j);
       if(j <= 0)
         break;
-      fprintf(stderr, "quicksort_partitioned swapping i %d j %d\n", i, j);
+      fprintf(stderr, "quicksort_partitioned swapping i %ld j %ld\n", i, j);
       lkt_swap(&points[i], &points[j]);
     }
-    fprintf(stderr, "quicksort_partitioned finished i %d j %d\n", i, j);
+    fprintf(stderr, "quicksort_partitioned finished i %ld j %ld\n", i, j);
 
     // swap i,j such that j is the greater
     if(i > j) {
@@ -376,30 +376,30 @@ size_t quicksort_partition(lqt_point* points, const size_t len, const ord_t pivo
 
   // debug - sanity check
   if(len > 1) {
-    for(int k = 0, kend = j; k != kend; ++k) {
+    for(long k = 0, kend = j; k != kend; ++k) {
       if(xaxis) {
         if(points[k].x > pivot_value) {
-          fprintf(stderr, "quicksort_partitioned ERROR: SORT FAILED i %d j %d k %d\n", i, j, k);
+          fprintf(stderr, "quicksort_partitioned ERROR: SORT FAILED i %ld j %ld k %ld\n", i, j, k);
         }
       } else {
         if(points[k].y > pivot_value) {
-          fprintf(stderr, "quicksort_partitioned ERROR: SORT FAILED i %d j %d k %d\n", i, j, k);
+          fprintf(stderr, "quicksort_partitioned ERROR: SORT FAILED i %ld j %ld k %ld\n", i, j, k);
         }
       }
     }
-    for(int k = j, kend = len; k != kend; ++k) {
+    for(long k = j, kend = len; k != kend; ++k) {
       if(xaxis) {
         if(points[k].x < pivot_value) {
-          fprintf(stderr, "quicksort_partitioned ERROR: SORT FAILED i %d j %d k %d\n", i, j, k);
+          fprintf(stderr, "quicksort_partitioned ERROR: SORT FAILED i %ld j %ld k %ld\n", i, j, k);
         }
       } else {
         if(points[k].y < pivot_value) {
-          fprintf(stderr, "quicksort_partitioned ERROR: SORT FAILED i %d j %d k %d\n", i, j, k);
+          fprintf(stderr, "quicksort_partitioned ERROR: SORT FAILED i %ld j %ld k %ld\n", i, j, k);
         }
       }
     }
   }
-  fprintf(stderr, "quicksort_partitioned on %d\n", j);
+  fprintf(stderr, "quicksort_partitioned on %ld\n", j);
   return j;
 }
 
@@ -478,7 +478,7 @@ linear_kdtree lkt_create(lqt_point* points, size_t len) {
   fprintf(stderr, "lkt_create depth %lu\n", (size_t)depth);
   fprintf(stderr, "lkt_create split_points_len %lu\n", (size_t)tree.split_points_len);
   fprintf(stderr, "lkt_create mallocing split_points size %lu\n", sizeof(lkt_split_point) * tree.split_points_len);
-  tree.split_points = malloc(sizeof(lkt_split_point) * tree.split_points_len);
+  tree.split_points = (lkt_split_point*) malloc(sizeof(lkt_split_point) * tree.split_points_len);
   fprintf(stderr, "lkt_create malloced split_points\n");
   tree.split_depth = depth;
   memset(tree.split_points, '\0', sizeof(lkt_split_point) * tree.split_points_len); // debug
@@ -507,7 +507,7 @@ mortoncode_t* lkt_create_mortoncodes(lqt_point* points, size_t len, lkt_split_po
 
   fprintf(stderr, "lkt_create_mortoncodes len %lu, split_points_len %lu, split_depth %lu\n", len, split_points_len, split_depth);
 
-  mortoncode_t* codes = malloc(sizeof(mortoncode_t) * len);
+  mortoncode_t* codes = (mortoncode_t*) malloc(sizeof(mortoncode_t) * len);
 
   for(size_t i = 0, end = len; i != end; ++i) { /// \todo vectorize
     mortoncode_t code = 0;
@@ -517,7 +517,7 @@ mortoncode_t* lkt_create_mortoncodes(lqt_point* points, size_t len, lkt_split_po
 
     int j = 0;
     // in practice, this can be optimised to remove 'j < jend' because we'd run out of memory before using 2^h instead of len(points)
-    for(int jend = split_depth, xaxis = true, split_pos = 0; j < jend && split_pos < split_points_len; ++j, xaxis = !xaxis) {
+    for(long jend = split_depth, xaxis = true, split_pos = 0; j < jend && split_pos < (long) split_points_len; ++j, xaxis = !xaxis) {
       const lkt_split_point splitpoint = split_points[split_pos];
       const ord_t split_point_val      = splitpoint.value;
       const ord_t point_ord            = point.x * xaxis + point.y * !xaxis; // xaxis ? point.x : point.y;
@@ -525,7 +525,7 @@ mortoncode_t* lkt_create_mortoncodes(lqt_point* points, size_t len, lkt_split_po
 
       code = code | (left << j);
 
-      fprintf(stderr, "\tj %d,\tsplitpoint_pos %d,\tsplitpoint_val %f,\t%s,\tp_ord %f,\t%s, code %u\n", j, split_pos, split_point_val, xaxis ? "x" : "y", point_ord, left ? "left" : "right", code);
+      fprintf(stderr, "\tj %d,\tsplitpoint_pos %ld,\tsplitpoint_val %f,\t%s,\tp_ord %f,\t%s, code %u\n", j, split_pos, split_point_val, xaxis ? "x" : "y", point_ord, left ? "left" : "right", code);
 
       split_pos = 2 * split_pos + (1 + !left); // left ? 1 : 2 (heap left child is 2*i+1, right child is 2*i+2)
     }
