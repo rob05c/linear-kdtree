@@ -5,6 +5,18 @@
 #include <math.h>
 #include <string.h>
 
+#include "quicksort.hh"
+
+// x value ALONE is used for comparison, to create an xpack
+bool operator<(const lqt_point& rhs, const lqt_point& lhs) {
+  return rhs.x < lhs.x;
+}
+
+std::ostream& operator<<(std::ostream& s, const lqt_point& p) {
+  s << "{" << p.x << ", " << p.y << ", " << p.key << "}";
+  return s;
+}
+
 // generate a uniform random between min and max exclusive
 static inline ord_t uniformFrand(const ord_t min, const ord_t max) {
   const double r = (double)rand() / RAND_MAX;
@@ -456,6 +468,23 @@ static inline void test_lkt(const size_t len, const size_t threads) {
 
 }
 
+static inline void test_quicksort(const size_t len, const size_t threads) {
+  printf("test_lkt\n");
+  const ord_t min = 0.0;
+  const ord_t max = 100.0;
+
+  lqt_point* points = create_points(len, min, max);
+
+  printf("created points:\n");
+//  print_points(points, len);
+  printf("quicksorting\n");
+
+  lqt_point pivot = {50.0, 50.0, ~0};
+  parallel_quicksort_partition(points, points + len, pivot, threads);
+
+  delete[] points;
+}
+
 void(*test_funcs[])(const size_t, const size_t threads) = {
   test_endian_2,
   test_many,
@@ -468,10 +497,11 @@ void(*test_funcs[])(const size_t, const size_t threads) = {
   test_unified_sorts,
   test_heterogeneous,
   test_quicksort_partition,
-  test_lkt
+  test_lkt,
+  test_quicksort,
 };
 
-static const char* default_app_name = "mergesort";
+static const char* default_app_name = "lkt";
 
 const char* tests[][2] = {
   {"test_endian_2"     , "test endianness conversions between 4-byte array"},
@@ -485,7 +515,8 @@ const char* tests[][2] = {
   {"test_unified_sorts", "test the values produced by CPU vs CUDA with unified create+sort function"},
   {"test_heterogeneous", "benchmark the time to create using CUDA and sort using CPU"},
   {"test_quicksort_partition", "test quicksort_partition()"},
-  {"test_lkt", "test lkt_create()"},
+  {"test_lkt"          , "test lkt_create()"},
+  {"test_quicksort"    , "test quicksort partitioner"},
 };
 
 const size_t test_num = sizeof(tests) / (sizeof(const char*) * 2);
@@ -536,7 +567,10 @@ static void print_usage(const char* app_name) {
 }
 
 int main(const int argc, const char** argv) {
-  srand(44); // constant seed for debugging
+  const time_t now = time(NULL);
+//  const time_t now = 1420954039; // debug fail with 100 elements!!
+  cout << "seed: " << now << endl;
+  srand(now); // constant seed for debugging
 
   const app_arguments args = parseArgs(argc, argv);
   if(!args.success) {

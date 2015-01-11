@@ -7,12 +7,15 @@
 #include <math.h>
 //#include "mergesort.hh"
 #include "tbb/tbb.h"
-
+/*
 // x value ALONE is used for comparison, to create an xpack
+bool operator<(const lqt_point& rhs, const lqt_point& lhs) {
+  return rhs.x < lhs.x;
+}
+*/
 bool operator<(const lqt_unified_node& rhs, const lqt_unified_node& lhs) {
   return rhs.location < lhs.location;
 }
-
 
 linear_quadtree_unified tbb_sortify_unified(linear_quadtree_unified lqt, const size_t threads) {
 //  auto lowxpack = [](const rtree_point& rhs, const rtree_point& lhs) {
