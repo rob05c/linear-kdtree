@@ -482,6 +482,8 @@ static inline void test_quicksort(const size_t len, const size_t threads) {
   lqt_point pivot = {50.0, 50.0, ~0};
   parallel_quicksort_partition(points, points + len, pivot, threads);
 
+  /// \todo move quicksort.hh validity tests here
+
   delete[] points;
 }
 

@@ -418,12 +418,12 @@ uint_least64_t parallel_quicksort_partition(T* array, T* end, const T& pivot, si
 */
 
   // debug
-  test_partitioner(array, end, pivot, BLOCK_SIZE, left_block_pos, right_block_pos, remaining_blocks_len, remaining_block_indices.get());
+//  test_partitioner(array, end, pivot, BLOCK_SIZE, left_block_pos, right_block_pos, remaining_blocks_len, remaining_block_indices.get());
 
   const uint_least64_t pos = neutralise_remaining(array, end, BLOCK_SIZE, remaining_block_indices.get(), remaining_blocks_len, left_block_pos, right_block_pos, pivot);
 
   // debug
-  test_partitioned(array, end, pivot, pos);
+//  test_partitioned(array, end, pivot, pos);
 
   return pos;
 }
