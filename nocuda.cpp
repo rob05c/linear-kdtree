@@ -118,7 +118,7 @@ static bool point_comparator_y(const lqt_point& a, const lqt_point& b) {
 
 /// \todo change splits to use copied double buffer, for parallel execution
 /// \param sample_rate the rate to sample when finding the split point
-static void lkt_sort_parallel(lqt_point* points, size_t len, 
+static void lkt_sort_parallel(lqt_point* points, size_t len, /* lqt_point* buffer, */
                      size_t sample_rate, lkt_split_point* splitpoints, ord_t splitpoint, size_t splitpoint_i, 
                      bool xaxis, 
                      const unsigned short current_depth, const unsigned short max_depth) {
@@ -134,6 +134,8 @@ static void lkt_sort_parallel(lqt_point* points, size_t len,
 */
   if(len < 2 || current_depth == max_depth || splitpoint_i > len)
     return;
+
+//  memcpy(buffer, points, sizeof(lqt_point) * len);
 
   // splitpoint is the value in the points array, by which the points will be partitioned
   // splitpoint_i is the index into the splitpoints array, of the current split.
@@ -157,9 +159,15 @@ static void lkt_sort_parallel(lqt_point* points, size_t len,
   next_split_r_func = (splitpoint_finder_func_t)((intptr_t)lkt_find_next_splitpoint_x_r * xaxis + (intptr_t)lkt_find_next_splitpoint_y_r * !xaxis);
   comparator_func   = (comparator_func_t)((intptr_t)point_comparator_x * xaxis + (intptr_t)point_comparator_y * !xaxis);
 
-  tbb::parallel_invoke([&]() {next_split_l_func(&next_split_l, points, points + len, sample_rate, splitpoint);},
-                       [&]() {next_split_r_func(&next_split_r, points, points + len, sample_rate, splitpoint);},
+  next_split_l_func(&next_split_l, points, points + len, sample_rate, splitpoint);
+  next_split_r_func(&next_split_r, points, points + len, sample_rate, splitpoint);
+  parallel_quicksort_partition(&splitpoint_val, points, &points[len], splitpoint_point, PARALLEL_QUICKSORT_THREADS, comparator_func);
+
+/* 
+  tbb::parallel_invoke([&]() {next_split_l_func(&next_split_l, buffer, buffer + len, sample_rate, splitpoint);},
+                       [&]() {next_split_r_func(&next_split_r, buffer, buffer + len, sample_rate, splitpoint);},
                        [&]() {parallel_quicksort_partition(&splitpoint_val, points, &points[len], splitpoint_point, PARALLEL_QUICKSORT_THREADS, comparator_func);});
+*/
 
 /*
   if(splitpoint_val == 0 || splitpoint_val == len) {
@@ -173,10 +181,10 @@ static void lkt_sort_parallel(lqt_point* points, size_t len,
   splitpoints[splitpoint_i].value = splitpoint;
   splitpoints[splitpoint_i].index = splitpoint_val;
 
-  tbb::parallel_invoke([&]() {lkt_sort_parallel(points, splitpoint_val, sample_rate, splitpoints, 
+  tbb::parallel_invoke([&]() {lkt_sort_parallel(points, splitpoint_val, /* buffer, */ sample_rate, splitpoints, 
                                                 next_split_l, get_heap_child_l(splitpoint_i), 
                                                 !xaxis, current_depth + 1, max_depth);},
-                       [&]() {lkt_sort_parallel(points + splitpoint_val, len - splitpoint_val, sample_rate, splitpoints, 
+                       [&]() {lkt_sort_parallel(points + splitpoint_val, len - splitpoint_val, /* buffer + splitpoint_val, */ sample_rate, splitpoints, 
                                                 next_split_r, get_heap_child_r(splitpoint_i), 
                                                 !xaxis, current_depth + 1, max_depth);});
 }
@@ -212,7 +220,11 @@ linear_kdtree lkt_create_parallel(lqt_point* points, size_t len) {
 
 //  fprintf(stderr, "lkt_create sorting\n");
 
-  lkt_sort_parallel(points, len, sample_rate, tree.split_points, initial_splitpoint, initial_splitpoint_i, true, 0, depth);
+//  lqt_point* buffer = new lqt_point[len];
+
+  lkt_sort_parallel(points, len, /* buffer, */ sample_rate, tree.split_points, initial_splitpoint, initial_splitpoint_i, true, 0, depth);
+
+//  delete[] buffer;
 
 //  fprintf(stderr, "lkt_create coding\n");
 
