@@ -27,6 +27,7 @@ inline size_t GetDeviceMemory() {
 #define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
 #endif
 
+/*
 inline size_t find_min(location_t* keys, const size_t keys_len) {
   if(keys_len == 0)
     return 0;
@@ -55,7 +56,9 @@ inline bool get_keys(location_t* keys, const linear_quadtree* array_blocks, cons
   }
   return got_key;
 }
+*/
 
+/*
 linear_quadtree lqt_merge(linear_quadtree* array_blocks, const size_t block_len, lqt_point* points, const size_t len) {
   linear_quadtree lqt;
   lqt.points    = points;
@@ -389,3 +392,4 @@ linear_quadtree_unified lqt_nodify_cuda_unified(lqt_point* points, size_t len,
   lqt.length   = len;
   return lqt;
 }
+*/

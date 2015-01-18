@@ -10,11 +10,12 @@
 #include <atomic>
 #include "tbb/tbb.h"
 #include <iostream> // debug
+#include <chrono> // debug
 
 using std::cout; // debug!
 using std::endl; // debug!
 
-const size_t BLOCK_SIZE = 10; ///< @todo find the optimum. Probably ~1/2 cache size
+const size_t BLOCK_SIZE = 1000; ///< @todo find the optimum. Probably ~1/2 cache size
 const uint_least64_t block_end = ~0;
 
 template <typename T>
@@ -28,9 +29,9 @@ void print_block(T* block, const size_t block_end) {
 
 /// \return whether all elements of the block are less than or equal to the pivot
 template <typename T>
-bool block_is_less(const T* block, const size_t len, const T& pivot) {
+bool block_is_less(const T* block, const size_t len, const T& pivot, bool (*comparator)(const T&, const T&)) {
   for(size_t i = 0, end = len; i != end; ++i) {
-    if(!(block[i] < pivot))
+    if(!(comparator(block[i], pivot)))
       return false;
   }
   return true;
@@ -38,9 +39,9 @@ bool block_is_less(const T* block, const size_t len, const T& pivot) {
 
 /// \return whether all elements of the block are greater than or equal to the pivot
 template <typename T>
-bool block_is_greater(const T* block, const size_t len, const T& pivot) {
+bool block_is_greater(const T* block, const size_t len, const T& pivot, bool (*comparator)(const T&, const T&)) {
   for(size_t i = 0, end = len; i != end; ++i) {
-    if(block[i] < pivot)
+    if(comparator(block[i], pivot))
       return false;
   }
   return true;
@@ -53,12 +54,18 @@ uint_least64_t get_block_end(const T* array, const T* end, const uint_least64_t 
 
 
 template <typename T>
-bool test_neutralised_block(const T* block, const size_t block_len, const T& pivot, const uint_least64_t block_pos, const uint_least64_t left_block_pos, const uint_least64_t right_block_pos) {
-  if(block_pos < left_block_pos && !block_is_less(block, block_len, pivot)) {
+bool test_neutralised_block(const T* block, 
+                            const size_t block_len, 
+                            const T& pivot, 
+                            const uint_least64_t block_pos, 
+                            const uint_least64_t left_block_pos, 
+                            const uint_least64_t right_block_pos, 
+                            bool (*comparator)(const T&, const T&)) {
+  if(block_pos < left_block_pos && !block_is_less(block, block_len, pivot, comparator)) {
     cout << "FAILURE: block " << block_pos << " contains an element greater than the pivot" << endl;
     print_block(block, block_len);
     return false;
-  } else if(block_pos >= right_block_pos && !block_is_greater(block, block_len, pivot)) {
+  } else if(block_pos >= right_block_pos && !block_is_greater(block, block_len, pivot, comparator)) {
     cout << "FAILURE: block " << block_pos << " contains an element less than the pivot" << endl;
     print_block(block, block_len);
     return false;
@@ -68,7 +75,7 @@ bool test_neutralised_block(const T* block, const size_t block_len, const T& piv
 
 template <typename T>
 void test_partitioner(T* array, T* array_end, const T& pivot, const size_t block_size, const uint_least64_t left_block_pos, const uint_least64_t right_block_pos, 
-                 const uint_least64_t remaining_blocks_len, const uint_least64_t* remaining_block_indices) {
+                      const uint_least64_t remaining_blocks_len, const uint_least64_t* remaining_block_indices, bool (*comparator)(const T&, const T&)) {
   cout << "test_partitioner" << endl;
 
   const size_t num_blocks = ceil((double)(array_end - array) / BLOCK_SIZE);
@@ -99,7 +106,7 @@ void test_partitioner(T* array, T* array_end, const T& pivot, const size_t block
       continue; // skip unneutralized blocks
     const T*     block     = &array[i * block_size];
     const size_t block_len = i * block_size + block_size < len ? block_size : array_end - block; // this could be made more efficient by only checking if the block is the last block. I think.
-    const bool block_good = test_neutralised_block(block, block_len, pivot, (uint_least64_t)i, left_block_pos, right_block_pos);
+    const bool block_good = test_neutralised_block(block, block_len, pivot, (uint_least64_t)i, left_block_pos, right_block_pos, comparator);
     if(!block_good)
       failed = true;
   }
@@ -110,7 +117,7 @@ void test_partitioner(T* array, T* array_end, const T& pivot, const size_t block
 }
 
 /// \return index of the next left block, or block_end if there are no left blocks left.
-uint_least64_t get_left_block(std::atomic_uint_least64_t* next_left_block, const std::atomic_uint_least64_t* next_right_block) {
+static uint_least64_t get_left_block(std::atomic_uint_least64_t* next_left_block, const std::atomic_uint_least64_t* next_right_block) {
   const uint_least64_t lblock = next_left_block->fetch_add(1);
   const uint_least64_t rblock = next_right_block->load() + 1; // +1 because load() is one greater than the last block someone has (they fetched-and-subbed).
   const uint_least64_t next = lblock >= rblock ? block_end : lblock;
@@ -118,7 +125,7 @@ uint_least64_t get_left_block(std::atomic_uint_least64_t* next_left_block, const
 }
 
 /// \return index of the next right block, or block_end if there are no left blocks left.
-uint_least64_t get_right_block(std::atomic_uint_least64_t* next_right_block, const std::atomic_uint_least64_t* next_left_block) {
+static uint_least64_t get_right_block(std::atomic_uint_least64_t* next_right_block, const std::atomic_uint_least64_t* next_left_block) {
   const uint_least64_t rblock = next_right_block->fetch_sub(1);
   const uint_least64_t lblock = next_left_block->load() - 1; // -1 because load() is one less than the last block someone has (they fetched-and-added).
   const uint_least64_t next = rblock <= lblock ? block_end : rblock;
@@ -133,14 +140,14 @@ enum Neutralised {
 };
 
 template <typename T>
-Neutralised neutralise(T* lblock, const uint_least64_t lend, T* rblock, const uint_least64_t rend, const T& pivot) {
+Neutralised neutralise(T* lblock, const uint_least64_t lend, T* rblock, const uint_least64_t rend, const T& pivot, bool (*comparator)(const T&, const T&)) {
   auto get_next_l = [&](uint_least64_t li) -> uint_least64_t {
-    for(; li != lend && lblock[li] < pivot; ++li);
+    for(; li != lend && comparator(lblock[li], pivot); ++li);
     return li;
   };
 
   auto get_next_r = [&](uint_least64_t ri) -> uint_least64_t {
-    for(; ri != rend  && !(rblock[ri] < pivot); ++ri);
+    for(; ri != rend  && !comparator(rblock[ri], pivot); ++ri);
     return ri;
   };
   
@@ -163,14 +170,14 @@ Neutralised neutralise(T* lblock, const uint_least64_t lend, T* rblock, const ui
 
 template <typename T>
 void partitioner(T* array, T* end, const size_t block_size, std::atomic_uint_least64_t* next_left_block, std::atomic_uint_least64_t* next_right_block, 
-                 uint_least64_t* remaining_block_indices, std::atomic_uint_least64_t* next_remaining, const T& pivot) {
+                 uint_least64_t* remaining_block_indices, std::atomic_uint_least64_t* next_remaining, const T& pivot, bool (*comparator)(const T&, const T&)) {
   uint_least64_t lblock_i = get_left_block(next_left_block, next_right_block);
   uint_least64_t rblock_i = get_right_block(next_right_block, next_left_block);
 
   while(lblock_i != block_end && rblock_i != block_end) {
     const uint_least64_t lend = &array[lblock_i * block_size + block_size] >= end ? (end - array) - (lblock_i * block_size) : block_size;
     const uint_least64_t rend = &array[rblock_i * block_size + block_size] >= end ? (end - array) - (rblock_i * block_size) : block_size;
-    const Neutralised neutralised = neutralise(&array[lblock_i * block_size], lend, &array[rblock_i * block_size], rend, pivot);
+    const Neutralised neutralised = neutralise(&array[lblock_i * block_size], lend, &array[rblock_i * block_size], rend, pivot, comparator);
     switch(neutralised) {
     case NEUTRALISED_LEFT:
       lblock_i = get_left_block(next_left_block, next_right_block);
@@ -207,7 +214,7 @@ void partitioner(T* array, T* end, const size_t block_size, std::atomic_uint_lea
 /// \return the index of the partition
 template <typename T>
 uint_least64_t neutralise_remaining(T* array, T* array_end, const size_t block_size, uint_least64_t* remaining_block_indices, const uint_least64_t remaining_blocks,
-                          uint_least64_t left_block_pos, uint_least64_t right_block_pos, const T& pivot) {
+                                    uint_least64_t left_block_pos, uint_least64_t right_block_pos, const T& pivot, bool (*comparator)(const T&, const T&)) {
 //  cout << "neutralise_remaining" << endl;
 
   auto block_swap = [&](uint_least64_t li, uint_least64_t lend, uint_least64_t ri, uint_least64_t rend) {
@@ -231,7 +238,7 @@ uint_least64_t neutralise_remaining(T* array, T* array_end, const size_t block_s
 
   while(remaining_left_i < remaining_right_i) {
 //    cout << "neutralising " << li << " and " << ri << endl;
-    const Neutralised neutralised = neutralise(&array[li * block_size], lend, &array[ri * block_size], rend, pivot);
+    const Neutralised neutralised = neutralise(&array[li * block_size], lend, &array[ri * block_size], rend, pivot, comparator);
     if(neutralised == NEUTRALISED_LEFT || neutralised == NEUTRALISED_BOTH) {
 //      cout << "neutralised left " << li << endl;
       if(li >= left_block_pos) { // neutralised on the wrong side: swap this one with the last left block and decrease left_block_pos.
@@ -301,7 +308,7 @@ uint_least64_t neutralise_remaining(T* array, T* array_end, const size_t block_s
 
   if(remaining_block != block_end) {
 //    cout << "sorting from " << remaining_block * block_size << " to " << remaining_block * block_size + lend << endl;
-    std::sort(&array[remaining_block * block_size], &array[remaining_block * block_size + lend]);
+    std::sort(&array[remaining_block * block_size], &array[remaining_block * block_size + lend], comparator);
 //    cout << "sorted remaining block" << endl;
 
     if(remaining_block < left_block_pos) {
@@ -323,6 +330,7 @@ uint_least64_t neutralise_remaining(T* array, T* array_end, const size_t block_s
 //  }
 
 //  cout << "getting ends" << endl;
+/* necessary?
   uint_least64_t lminusend = get_block_end(array, array_end, block_size, left_block_pos - 1);
   lend = get_block_end(array, array_end, block_size, left_block_pos);
   rend = get_block_end(array, array_end, block_size, right_block_pos);
@@ -331,10 +339,11 @@ uint_least64_t neutralise_remaining(T* array, T* array_end, const size_t block_s
 //  cout << "sorted again, getting pivot" << endl;
 
 //  std::sort(&array[right_block_pos], &array[right_block_pos + rend]);
+*/
 
   uint_least64_t pos = (left_block_pos - 1) * block_size;
   for(T* i = &array[pos]; i != array_end; ++i, ++pos) {
-    if(pivot < *i)
+    if(comparator(pivot, *i))
       break;
   }
 
@@ -344,7 +353,7 @@ uint_least64_t neutralise_remaining(T* array, T* array_end, const size_t block_s
 }
 
 template <typename T>
-void test_partitioned(T* array, T* end, const T& pivot, const uint_least64_t pos) {
+void test_partitioned(T* array, T* end, const T& pivot, const uint_least64_t pos, bool (*comparator)(const T&, const T&)) {
   cout << "test_partitioned" << endl;
   cout << "pivot:\t" << pivot << endl;
   cout << "pos:\t" << pos << endl;
@@ -357,14 +366,14 @@ void test_partitioned(T* array, T* end, const T& pivot, const uint_least64_t pos
   bool failed = false;
   
   for(int i = 0, end = pos; i != end; ++i) {
-    if(pivot < array[i]) {
+    if(comparator(pivot, array[i])) {
       cout << "failed index " << i << " value " << array[i] << " from block " << i / BLOCK_SIZE << endl;
       failed = true;
     }
   }
 
   for(int i = pos, end = len; i != end; ++i) {
-    if(array[i] < pivot) {
+    if(comparator(array[i], pivot)) {
       cout << "failed index " << i << " value " << array[i] << " from block " << i / BLOCK_SIZE << endl;
       failed = true;
     }
@@ -377,10 +386,9 @@ void test_partitioned(T* array, T* end, const T& pivot, const uint_least64_t pos
   }
 }
 
-/// \return the position of the partition
+/// \param retval[out] the position of the partition. Parametertised because TBB.
 template <typename T>
-uint_least64_t parallel_quicksort_partition(T* array, T* end, const T& pivot, size_t threads) {
-  tbb::task_scheduler_init init(threads + 1); // +1 for the manager thread
+void parallel_quicksort_partition(uint_least64_t* retval, T* array, T* end, const T& pivot, size_t threads, bool (*comparator)(const T&, const T&)) {
   const size_t num_blocks = ceil((double)(end - array) / BLOCK_SIZE);
 
   std::unique_ptr<uint_least64_t> remaining_block_indices(new uint_least64_t[threads]);
@@ -390,8 +398,12 @@ uint_least64_t parallel_quicksort_partition(T* array, T* end, const T& pivot, si
   std::atomic_uint_least64_t next_remaining(0);
 
   tbb::parallel_for(size_t(0), threads, size_t(1), [&](size_t) {
-      partitioner(array, end, BLOCK_SIZE, &next_left_block, &next_right_block, remaining_block_indices.get(), &next_remaining, pivot);
+      partitioner(array, end, BLOCK_SIZE, &next_left_block, &next_right_block, remaining_block_indices.get(), &next_remaining, pivot, comparator);
     });
+
+//  partitioner(array, end, BLOCK_SIZE, &next_left_block, &next_right_block, remaining_block_indices.get(), &next_remaining, pivot, comparator);
+//  auto partitionerl = [&]() {partitioner(array, end, BLOCK_SIZE, &next_left_block, &next_right_block, remaining_block_indices.get(), &next_remaining, pivot, comparator);};
+//  tbb::parallel_invoke(partitionerl, partitionerl, partitionerl, partitionerl);
 
   uint_least64_t left_block_pos = next_left_block.load();
   uint_least64_t right_block_pos = next_right_block.load() + 1;
@@ -418,14 +430,14 @@ uint_least64_t parallel_quicksort_partition(T* array, T* end, const T& pivot, si
 */
 
   // debug
-//  test_partitioner(array, end, pivot, BLOCK_SIZE, left_block_pos, right_block_pos, remaining_blocks_len, remaining_block_indices.get());
+//  test_partitioner(array, end, pivot, BLOCK_SIZE, left_block_pos, right_block_pos, remaining_blocks_len, remaining_block_indices.get(), comparator);
 
-  const uint_least64_t pos = neutralise_remaining(array, end, BLOCK_SIZE, remaining_block_indices.get(), remaining_blocks_len, left_block_pos, right_block_pos, pivot);
+  const uint_least64_t pos = neutralise_remaining(array, end, BLOCK_SIZE, remaining_block_indices.get(), remaining_blocks_len, left_block_pos, right_block_pos, pivot, comparator);
 
   // debug
-//  test_partitioned(array, end, pivot, pos);
+//  test_partitioned(array, end, pivot, pos, comparator);
 
-  return pos;
+  *retval = pos;
 }
 
 
