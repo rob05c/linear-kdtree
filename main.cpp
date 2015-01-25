@@ -8,6 +8,7 @@
 #include <chrono>
 #include <tbb/tbb.h>
 #include "quicksort.hh"
+#include "fixlentree.hh"
 
 using std::cout;
 using std::endl;
@@ -15,22 +16,40 @@ using std::endl;
 //#include "quicksort.hh"
 
 // x value ALONE is used for comparison, to create an xpack
-bool operator<(const lqt_point& rhs, const lqt_point& lhs) {
+bool operator<(const lkt_point& rhs, const lkt_point& lhs) {
   return rhs.x < lhs.x;
 }
-/*
-std::ostream& operator<<(std::ostream& s, const lqt_point& p) {
+
+std::ostream& operator<<(std::ostream& s, const lkt_point& p) {
   s << "{" << p.x << ", " << p.y << ", " << p.key << "}";
   return s;
 }
-*/
+
+/// \todo fix
+template <typename T>
+void print_fixlentree_node(const typename fixlentree<T>::node& n) {
+  cout << "[" << n.value << ", " << n.right << ", " << n.left << "]";
+}
+
+template <typename T>
+void print_fixlentree(const fixlentree<T>& tree) {
+  cout << "{" << endl;
+  const typename fixlentree<T>::node* nodes = tree.get_array();
+  for(int i = 0, end = tree.size(); i != end; ++i) {
+    const typename fixlentree<T>::node& n = nodes[i];
+    cout << "[" << n.value << ", " << n.right << ", " << n.left << "]";
+    cout << endl;
+  }
+  cout << "}" << endl;
+}
+
 // generate a uniform random between min and max exclusive
 static inline ord_t uniformFrand(const ord_t min, const ord_t max) {
   const double r = (double)rand() / RAND_MAX;
   return min + r * (max - min);
 }
 
-static inline void print_points(lqt_point* points, const size_t len) {
+static inline void print_points(lkt_point* points, const size_t len) {
   for(int i = 0, end = len; i != end; ++i) {
     printf("(%f,%f,%d)\n", points[i].x, points[i].y, points[i].key);
   }
@@ -45,7 +64,7 @@ static inline void print_code(mortoncode_t c) {
   printf("] (%u)", c);
 }
 
-static inline void print_points_codes(lqt_point* points, mortoncode_t* codes, const size_t len) {
+static inline void print_points_codes(lkt_point* points, mortoncode_t* codes, const size_t len) {
   for(int i = 0, end = len; i != end; ++i) {
     printf("(%f,%f,%d,\t", points[i].x, points[i].y, points[i].key);
     print_code(codes[i]);
@@ -61,8 +80,8 @@ static inline void print_splitpoints(lkt_split_point* points, const size_t len) 
 }
 
 /// \return an array of len points. Caller takes ownership, and must call delete
-static inline lqt_point* create_points(const size_t len, const ord_t min, const ord_t max) {
-  lqt_point* points = new lqt_point[len];
+static inline lkt_point* create_points(const size_t len, const ord_t min, const ord_t max) {
+  lkt_point* points = new lkt_point[len];
   for(int i = 0, end = len; i != end; ++i) {
     points[i].x = uniformFrand(min, max);
     points[i].y = uniformFrand(min, max);
@@ -78,7 +97,7 @@ static inline void test_quicksort_partition(const size_t numPoints, const size_t
   const ord_t min = 0.0;
   const ord_t max = 10.0;
 
-  lqt_point* points = create_points(len, min, max);
+  lkt_point* points = create_points(len, min, max);
 
   printf("created points:\n");
   print_points(points, len);
@@ -99,7 +118,7 @@ static inline void test_lkt(const size_t len, const size_t threads) {
   const ord_t min = 0.0;
   const ord_t max = 100.0;
 
-  lqt_point* points = create_points(len, min, max);
+  lkt_point* points = create_points(len, min, max);
 
   printf("created points:\n");
   print_points(points, len);
@@ -120,7 +139,7 @@ static inline void test_lkt_parallel(const size_t len, const size_t threads) {
   const ord_t min = 0.0;
   const ord_t max = 100.0;
 
-  lqt_point* points = create_points(len, min, max);
+  lkt_point* points = create_points(len, min, max);
 
   printf("created points:\n");
   print_points(points, len);
@@ -145,9 +164,9 @@ static inline void test_lkt_compare(const size_t len, const size_t threads) {
   const ord_t min = 0.0;
   const ord_t max = 100.0;
 
-  lqt_point* points = create_points(len, min, max);
-  lqt_point* points2 = new lqt_point[len];
-  memcpy(points2, points, sizeof(lqt_point) * len);
+  lkt_point* points = create_points(len, min, max);
+  lkt_point* points2 = new lkt_point[len];
+  memcpy(points2, points, sizeof(lkt_point) * len);
 
   cout << "created points:" << endl;
 
@@ -174,7 +193,7 @@ static inline void test_lkt_compare(const size_t len, const size_t threads) {
 
 
 
-static bool point_comparator_x(const lqt_point& a, const lqt_point& b) {
+static bool point_comparator_x(const lkt_point& a, const lkt_point& b) {
   return a.x < b.x;
 }
 
@@ -183,13 +202,13 @@ static inline void test_quicksort(const size_t len, const size_t threads) {
   const ord_t min = 0.0;
   const ord_t max = 100.0;
 
-  lqt_point* points = create_points(len, min, max);
+  lkt_point* points = create_points(len, min, max);
 
   printf("created points:\n");
 //  print_points(points, len);
   printf("quicksorting\n");
 
-//  lqt_point pivot = {50.0, 50.0, ~0};
+//  lkt_point pivot = {50.0, 50.0, ~0};
 //  parallel_quicksort_partition(points, points + len, pivot, threads, point_comparator_x);
 
   /// \todo move quicksort.hh validity tests here
@@ -203,11 +222,11 @@ static inline void test_quicksort_compare(const size_t len, const size_t threads
   const ord_t max = 100.0;
 
   printf("creating points:\n");
-  lqt_point* points = create_points(len, min, max);
-  lqt_point* points2 = new lqt_point[len];
-  lqt_point pivot = {50.0, 50.0, ~0};
+  lkt_point* points = create_points(len, min, max);
+  lkt_point* points2 = new lkt_point[len];
+  lkt_point pivot = {50.0, 50.0, ~0};
   uint_least64_t splitpoint_val;
-  memcpy(points2, points, sizeof(lqt_point) * len);
+  memcpy(points2, points, sizeof(lkt_point) * len);
   printf("quicksorting\n");
 
   const auto start = std::chrono::high_resolution_clock::now();
@@ -226,6 +245,35 @@ static inline void test_quicksort_compare(const size_t len, const size_t threads
   cout << "mimd time (ms): " << pelapsed_ms << endl;
 }
 
+static inline void test_fixlentree(const size_t len, const size_t threads) {
+  cout << "test_fixlentree" << endl;
+  if(len == 0) {
+    cout << "Zero-length tree? really?" << endl;
+    return;
+  }
+
+  const ord_t min = 0.0;
+  const ord_t max = 100.0;
+
+  cout << "creating points" << endl;
+  lkt_point* points = create_points(len, min, max);
+  cout << "created points" << endl;
+
+  cout << "creating tree" << endl;
+  fixlentree<lkt_point> tree(len);
+  cout << "size: " << tree.size() << endl;
+
+  index_t pos = tree.insert_root(points[0]);
+  for(int i = 1, end = len; i != end; ++i) {
+    const bool left = i % 2 == 0;
+    pos = tree.insert(pos, left, points[i]);
+  }
+
+  cout << "created tree" << endl;
+
+  print_fixlentree(tree);
+}
+
 void(*test_funcs[])(const size_t, const size_t threads) = {
   test_quicksort_partition,
   test_quicksort,
@@ -233,6 +281,7 @@ void(*test_funcs[])(const size_t, const size_t threads) = {
   test_lkt,
   test_lkt_parallel,
   test_lkt_compare,
+  test_fixlentree,
 };
 
 static const char* default_app_name = "lkt";
@@ -243,7 +292,8 @@ const char* tests[][2] = {
   {"test_quicksort_compare"  , "benchmark quicksort_partition() vs parallel_quicksort_partition()"},  
   {"test_lkt"                , "test lkt_create()"},
   {"test_lkt_parallel"       , "test lkt_create_parallel()"},
-  {"test_lkt_compare"        , "benchmark lkt_create() vs lkt_create_parallel()"},  
+  {"test_lkt_compare"        , "benchmark lkt_create() vs lkt_create_parallel()"},
+  {"test_fixlentree"        , "test fixlentree structure"},
 };
 
 const size_t test_num = sizeof(tests) / (sizeof(const char*) * 2);

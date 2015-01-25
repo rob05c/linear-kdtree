@@ -3,6 +3,12 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <iostream>
+
+using std::cout;
+using std::endl;
+
+static size_t splitpoints_min = 100000;
 
 void lkt_delete(linear_kdtree tree) {
   delete[] tree.points;
@@ -13,10 +19,10 @@ void lkt_delete(linear_kdtree tree) {
 /// \todo change these to C++ and use templates. Or Macros. Something.
 
 /// finds a heuristic value, using the given sample rate, splitting on the x-axis
-static ord_t lkt_find_splitpoint_x(lqt_point* begin, lqt_point* end, size_t sample_rate) {
+static ord_t lkt_find_splitpoint_x(lkt_point* begin, lkt_point* end, size_t sample_rate) {
   double average = 0.0;
   size_t samples_taken = 0;
-  for(lqt_point* i = begin; i < end; i += sample_rate, ++samples_taken) {
+  for(lkt_point* i = begin; i < end; i += sample_rate, ++samples_taken) {
     average += i->x;
   }
   average /= samples_taken;
@@ -24,10 +30,10 @@ static ord_t lkt_find_splitpoint_x(lqt_point* begin, lqt_point* end, size_t samp
 }
 /*
 /// finds a heuristic value, using the given sample rate, splitting on the y-axis
-static ord_t lkt_find_splitpoint_y(lqt_point* begin, lqt_point* end, size_t sample_rate) {
+static ord_t lkt_find_splitpoint_y(lkt_point* begin, lkt_point* end, size_t sample_rate) {
   double average = 0.0;
   size_t samples_taken = 0;
-  for(lqt_point* i = begin; i < end; i += sample_rate, ++samples_taken) {
+  for(lkt_point* i = begin; i < end; i += sample_rate, ++samples_taken) {
     average += i->y;
   }
   average /= samples_taken;
@@ -35,11 +41,11 @@ static ord_t lkt_find_splitpoint_y(lqt_point* begin, lqt_point* end, size_t samp
 }
 */
 /// find the next splitpoint on the y axis, ignoring values less than the given min
-static ord_t lkt_find_next_splitpoint_y_l(lqt_point* begin, lqt_point* end, size_t sample_rate, ord_t min) {
+static ord_t lkt_find_next_splitpoint_y_l(lkt_point* begin, lkt_point* end, size_t sample_rate, ord_t min) {
   double average = 0.0;
   size_t samples_taken = 0;
   const size_t sample_distance = ((end - begin) / sample_rate) + 1;
-  for(lqt_point* i = begin; i < end; i += sample_distance, ++samples_taken) {
+  for(lkt_point* i = begin; i < end; i += sample_distance, ++samples_taken) {
     if(i->y < min)
       continue;
     average += i->y;
@@ -48,11 +54,11 @@ static ord_t lkt_find_next_splitpoint_y_l(lqt_point* begin, lqt_point* end, size
   return average;
 }
 /// find the next splitpoint on the y axis, ignoring values greater than the given max
-static ord_t lkt_find_next_splitpoint_y_r(lqt_point* begin, lqt_point* end, size_t sample_rate, ord_t max) {
+static ord_t lkt_find_next_splitpoint_y_r(lkt_point* begin, lkt_point* end, size_t sample_rate, ord_t max) {
   double average = 0.0;
   size_t samples_taken = 0;
   const size_t sample_distance = ((end - begin) / sample_rate) + 1;
-  for(lqt_point* i = begin; i < end; i += sample_distance, ++samples_taken) {
+  for(lkt_point* i = begin; i < end; i += sample_distance, ++samples_taken) {
     if(i->y > max)
       continue;
     average += i->y;
@@ -61,11 +67,11 @@ static ord_t lkt_find_next_splitpoint_y_r(lqt_point* begin, lqt_point* end, size
   return average;
 }
 /// find the next splitpoint on the x axis, ignoring values less than the given min
-static ord_t lkt_find_next_splitpoint_x_l(lqt_point* begin, lqt_point* end, size_t sample_rate, ord_t min) {
+static ord_t lkt_find_next_splitpoint_x_l(lkt_point* begin, lkt_point* end, size_t sample_rate, ord_t min) {
   double average = 0.0;
   size_t samples_taken = 0;
   const size_t sample_distance = ((end - begin) / sample_rate) + 1;
-  for(lqt_point* i = begin; i < end; i += sample_distance, ++samples_taken) {
+  for(lkt_point* i = begin; i < end; i += sample_distance, ++samples_taken) {
     if(i->x < min)
       continue;
     average += i->x;
@@ -74,11 +80,11 @@ static ord_t lkt_find_next_splitpoint_x_l(lqt_point* begin, lqt_point* end, size
   return average;
 }
 /// find the next splitpoint on the x axis, ignoring values greater than the given max
-static ord_t lkt_find_next_splitpoint_x_r(lqt_point* begin, lqt_point* end, size_t sample_rate, ord_t max) {
+static ord_t lkt_find_next_splitpoint_x_r(lkt_point* begin, lkt_point* end, size_t sample_rate, ord_t max) {
   double average = 0.0;
   size_t samples_taken = 0;
   const size_t sample_distance = ((end - begin) / sample_rate) + 1;
-  for(lqt_point* i = begin; i < end; i += sample_distance, ++samples_taken) {
+  for(lkt_point* i = begin; i < end; i += sample_distance, ++samples_taken) {
     if(i->x > max)
       continue;
     average += i->x;
@@ -88,8 +94,8 @@ static ord_t lkt_find_next_splitpoint_x_r(lqt_point* begin, lqt_point* end, size
 }
 
 /// DO NOT change this to use the XOR method. It is slow.
-static inline void lkt_swap(lqt_point* a, lqt_point* b) {
-  lqt_point old_a = *a;
+static inline void lkt_swap(lkt_point* a, lkt_point* b) {
+  lkt_point old_a = *a;
   *a = *b;
   *b = old_a;
 }
@@ -99,9 +105,9 @@ static inline void lkt_swap(lqt_point* a, lqt_point* b) {
 /// Unlike traditional quicksort partition, We don't actually use a pivot, since we only have the value to partion, not an element.
 /// \param xaxis partition based on the x-axis. Else, the y-axis.
 /// \return the index of the partition. Everything less than pivot_value is before the returned index. points[return] is the first element greater than pivot_value
-size_t quicksort_partition(lqt_point* points, const size_t len, const ord_t pivot_value, const bool xaxis) {
+size_t quicksort_partition(lkt_point* points, const size_t len, const ord_t pivot_value, const bool xaxis) {
 //  const size_t pivot_index = points + len - 1;
-//  const lqt_point* pivot_value = points[pivot_index];
+//  const lkt_point* pivot_value = points[pivot_index];
 //  lkt_swap(pivot_value, points[len - 1]);
 //  if(len == 2)
 //    return 1;
@@ -179,6 +185,7 @@ size_t quicksort_partition(lqt_point* points, const size_t len, const ord_t pivo
   if(j < 0)
     j = 0;
 
+/*
   // debug - sanity check
   if(len > 1) {
     for(long k = 0, kend = j; k != kend; ++k) {
@@ -205,6 +212,8 @@ size_t quicksort_partition(lqt_point* points, const size_t len, const ord_t pivo
     }
   }
 //  fprintf(stderr, "quicksort_partitioned on %ld\n", j);
+*/
+
   return j;
 }
 
@@ -214,7 +223,10 @@ static inline size_t get_heap_parent(const size_t i) {return (i - 1) / 2;}
 
 /// \todo change splits to use copied double buffer, for parallel execution
 /// \param sample_rate the rate to sample when finding the split point
-static void lkt_sort(lqt_point* points, size_t len, 
+/// \param splitpoints the array of split points, tracking the index and coordinate of each split. A heap.
+/// \param splitpoint the coordinate of this split
+/// \param splitpoint_i the index of this splitpoint in the splitpoints array
+static void lkt_sort(lkt_point* points, size_t len, 
                      size_t sample_rate, lkt_split_point* splitpoints, ord_t splitpoint, size_t splitpoint_i, 
                      bool xaxis, 
                      const unsigned short current_depth, const unsigned short max_depth) {
@@ -226,20 +238,35 @@ static void lkt_sort(lqt_point* points, size_t len,
 //  fprintf(stderr, "sort at splitpoint_i = %lu\n", splitpoint_i);
 //  fflush(stdout);
 
-  if(len < 2 || current_depth == max_depth || splitpoint_i > len)
+  const size_t splitpoints_len = std::max(len, splitpoints_min);
+
+  cout << "sort - current_depth: " << current_depth << " splitpoint_i:" << splitpoint_i << " len: " << len << " splitpoints_len: " << splitpoints_len << endl;
+
+//  if(len < 2 || current_depth == max_depth || splitpoint_i >= splitpoints_len)
+  if(len < 2 || splitpoint_i >= splitpoints_len) {
+    cout << "RETURNING - len < 2 or splitpoint_i too big" << endl;
     return;
+  }
 
   /// \todo fix conditionals
-
-  // splitpoint is the value in the points array, by which the points will be partitioned
-  // splitpoint_i is the index into the splitpoints array, of the current split.
-  // splitpoint_val is the (local) index in the points array, before which values are less than splitpoint.
 
   const ord_t next_split_l = xaxis ? lkt_find_next_splitpoint_x_l(points, points + len, sample_rate, splitpoint)
     : lkt_find_next_splitpoint_y_l(points, points + len, sample_rate, splitpoint); // parallel
   const ord_t next_split_r = xaxis ? lkt_find_next_splitpoint_x_r(points, points + len, sample_rate, splitpoint)
     : lkt_find_next_splitpoint_y_r(points, points + len, sample_rate, splitpoint); // parallel
+
+  /// the position of the partition in the sorted points array.
   const size_t splitpoint_val = quicksort_partition(points, len, splitpoint, xaxis); // parallel
+
+  cout << "next_split_l: " << next_split_l << " next_split_r: " << next_split_r << " splitpoint_val: " << splitpoint_val << " splitpoint_i:" << splitpoint_i << endl;;
+
+  cout << "SPLIT EVENNESS: " << splitpoint_val << "/" << len << endl;
+
+  if(splitpoint_val == 0 || splitpoint_val == len - 1) {
+    cout << "BREAKING - splitpoint_val = 0 or len" << endl;
+    return;
+  }
+
 
 /*
   if(splitpoint_val == 0 || splitpoint_val == len) {
@@ -265,7 +292,7 @@ static void lkt_sort(lqt_point* points, size_t len,
 }
 
 /// returns a heap
-linear_kdtree lkt_create(lqt_point* points, size_t len) {
+linear_kdtree lkt_create(lkt_point* points, size_t len) {
 //  fprintf(stderr, "lkt_create called for points %p, true end %p \n", (void*)points, (void*)(points + len));
 
   if(sizeof(mortoncode_t) != 4) {
@@ -278,7 +305,10 @@ linear_kdtree lkt_create(lqt_point* points, size_t len) {
   linear_kdtree tree;
   tree.points = points;
   tree.len = len;
-  tree.split_points_len = len; // min(len, pow(2, depth)), but the length will always be less. We'd run out of memory before it wasn't.
+  tree.split_points_len = std::max(len, splitpoints_min); // min(len, pow(2, depth)), but the length will always be less. We'd run out of memory before it wasn't.
+
+  cout << "depth = " << depth << endl;
+  cout << "tree.split_points_len = " << tree.split_points_len << endl;
 
 //  fprintf(stderr, "lkt_create depth %lu\n", (size_t)depth);
 //  fprintf(stderr, "lkt_create split_points_len %lu\n", (size_t)tree.split_points_len);
@@ -304,7 +334,7 @@ linear_kdtree lkt_create(lqt_point* points, size_t len) {
 }
 
 /// \return array of morton codes, of len length. Caller takes ownership.
-mortoncode_t* lkt_create_mortoncodes(lqt_point* points, size_t len, lkt_split_point* split_points, size_t split_points_len, size_t split_depth) {
+mortoncode_t* lkt_create_mortoncodes(lkt_point* points, size_t len, lkt_split_point* split_points, size_t split_points_len, size_t split_depth) {
   if(sizeof(mortoncode_t) * CHAR_BIT < split_depth) {
     fprintf(stderr, "mortoncode_t LESS THAN split_depth! ERROR!ERROR!ERROR!"); /// \todo fix to be static_assert
     exit(1);
@@ -313,11 +343,11 @@ mortoncode_t* lkt_create_mortoncodes(lqt_point* points, size_t len, lkt_split_po
 //  fprintf(stderr, "lkt_create_mortoncodes len %lu, split_points_len %lu, split_depth %lu\n", len, split_points_len, split_depth);
 
   mortoncode_t* codes = new mortoncode_t[len];
-  return codes; // debug !! undo !!
-/*
+//  return codes; // debug !! undo !!
+
   for(size_t i = 0, end = len; i != end; ++i) { /// \todo vectorize
     mortoncode_t code = 0;
-    const lqt_point point = points[i];
+    const lkt_point point = points[i];
 
 //    fprintf(stderr, "lkt_create_mortoncodes point {%f, %f}\n", point.x, point.y);
 
@@ -333,7 +363,7 @@ mortoncode_t* lkt_create_mortoncodes(lqt_point* points, size_t len, lkt_split_po
 
 //      fprintf(stderr, "\tj %d,\tsplitpoint_pos %ld,\tsplitpoint_val %f,\t%s,\tp_ord %f,\t%s, code %u\n", j, split_pos, split_point_val, xaxis ? "x" : "y", point_ord, left ? "left" : "right", code);
 
-      split_pos = 2 * split_pos + (1 + !left); // left ? 1 : 2 (heap left child is 2*i+1, right child is 2*i+2)
+      split_pos = left ? get_heap_child_l(split_pos) : get_heap_child_r(split_pos);
     }
     
 ////    fprintf(stderr, "lkt_create_mortoncodes j %d code_size %lu \n", j, (size_t)(sizeof(mortoncode_t) * CHAR_BIT));
@@ -343,6 +373,6 @@ mortoncode_t* lkt_create_mortoncodes(lqt_point* points, size_t len, lkt_split_po
 //    fprintf(stderr, "lkt_create_mortoncodes code %lu: %u\n", i, code);
     codes[i] = code;
   }
-*/
+
   return codes;
 }

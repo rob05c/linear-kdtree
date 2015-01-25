@@ -1,5 +1,5 @@
 CUDA_CC=nvcc
-CUDA_FLAGS=-O3 -I /usr/local/cuda/include -I ../../cuda/cub
+CUDA_FLAGS=-O3 -std=c++11 -I /usr/local/cuda/include -I ../../cuda/cub
 LINK_CC=g++
 LINK_FLAGS=-O3 -L/usr/local/cuda/lib64 -lcuda -lcudart -ltbb
 CC_CPP=g++

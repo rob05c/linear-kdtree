@@ -9,19 +9,21 @@
 #include "tbb/tbb.h"
 #include "quicksort.hh"
 
-std::ostream& operator<<(std::ostream& s, const lqt_point& p) {
+/*
+std::ostream& operator<<(std::ostream& s, const lkt_point& p) {
   s << "{" << p.x << ", " << p.y << ", " << p.key << "}";
   return s;
 }
+*/
 
 /// \todo change these to C++ and use templates. Or Macros. Something.
 
 /// finds a heuristic value, using the given sample rate, splitting on the x-axis
 /// \param retval[out] next splitpoint. Param instead of return, because TBB.
-static void lkt_find_splitpoint_x(ord_t* retval, lqt_point* begin, lqt_point* end, size_t sample_rate) {
+static void lkt_find_splitpoint_x(ord_t* retval, lkt_point* begin, lkt_point* end, size_t sample_rate) {
   double average = 0.0;
   size_t samples_taken = 0;
-  for(lqt_point* i = begin; i < end; i += sample_rate, ++samples_taken) {
+  for(lkt_point* i = begin; i < end; i += sample_rate, ++samples_taken) {
     average += i->x;
   }
   average /= samples_taken;
@@ -29,10 +31,10 @@ static void lkt_find_splitpoint_x(ord_t* retval, lqt_point* begin, lqt_point* en
 }
 /*
 /// finds a heuristic value, using the given sample rate, splitting on the y-axis
-static ord_t lkt_find_splitpoint_y(lqt_point* begin, lqt_point* end, size_t sample_rate) {
+static ord_t lkt_find_splitpoint_y(lkt_point* begin, lkt_point* end, size_t sample_rate) {
   double average = 0.0;
   size_t samples_taken = 0;
-  for(lqt_point* i = begin; i < end; i += sample_rate, ++samples_taken) {
+  for(lkt_point* i = begin; i < end; i += sample_rate, ++samples_taken) {
     average += i->y;
   }
   average /= samples_taken;
@@ -41,11 +43,11 @@ static ord_t lkt_find_splitpoint_y(lqt_point* begin, lqt_point* end, size_t samp
 */
 /// find the next splitpoint on the y axis, ignoring values less than the given min
 /// \param retval[out] next splitpoint. Param instead of return, because TBB.
-static void lkt_find_next_splitpoint_y_l(ord_t* retval, lqt_point* begin, lqt_point* end, size_t sample_rate, ord_t min) {
+static void lkt_find_next_splitpoint_y_l(ord_t* retval, lkt_point* begin, lkt_point* end, size_t sample_rate, ord_t min) {
   double average = 0.0;
   size_t samples_taken = 0;
   const size_t sample_distance = ((end - begin) / sample_rate) + 1;
-  for(lqt_point* i = begin; i < end; i += sample_distance, ++samples_taken) {
+  for(lkt_point* i = begin; i < end; i += sample_distance, ++samples_taken) {
     if(i->y < min)
       continue;
     average += i->y;
@@ -56,11 +58,11 @@ static void lkt_find_next_splitpoint_y_l(ord_t* retval, lqt_point* begin, lqt_po
 
 /// find the next splitpoint on the y axis, ignoring values greater than the given max
 /// \param retval[out] next splitpoint. Param instead of return, because TBB.
-static void lkt_find_next_splitpoint_y_r(ord_t* retval, lqt_point* begin, lqt_point* end, size_t sample_rate, ord_t max) {
+static void lkt_find_next_splitpoint_y_r(ord_t* retval, lkt_point* begin, lkt_point* end, size_t sample_rate, ord_t max) {
   double average = 0.0;
   size_t samples_taken = 0;
   const size_t sample_distance = ((end - begin) / sample_rate) + 1;
-  for(lqt_point* i = begin; i < end; i += sample_distance, ++samples_taken) {
+  for(lkt_point* i = begin; i < end; i += sample_distance, ++samples_taken) {
     if(i->y > max)
       continue;
     average += i->y;
@@ -70,11 +72,11 @@ static void lkt_find_next_splitpoint_y_r(ord_t* retval, lqt_point* begin, lqt_po
 }
 /// find the next splitpoint on the x axis, ignoring values less than the given min
 /// \param retval[out] next splitpoint. Param instead of return, because TBB.
-static void lkt_find_next_splitpoint_x_l(ord_t* retval, lqt_point* begin, lqt_point* end, size_t sample_rate, ord_t min) {
+static void lkt_find_next_splitpoint_x_l(ord_t* retval, lkt_point* begin, lkt_point* end, size_t sample_rate, ord_t min) {
   double average = 0.0;
   size_t samples_taken = 0;
   const size_t sample_distance = ((end - begin) / sample_rate) + 1;
-  for(lqt_point* i = begin; i < end; i += sample_distance, ++samples_taken) {
+  for(lkt_point* i = begin; i < end; i += sample_distance, ++samples_taken) {
     if(i->x < min)
       continue;
     average += i->x;
@@ -84,11 +86,11 @@ static void lkt_find_next_splitpoint_x_l(ord_t* retval, lqt_point* begin, lqt_po
 }
 /// find the next splitpoint on the x axis, ignoring values greater than the given max
 /// \param retval[out] next splitpoint. Param instead of return, because TBB.
-static void lkt_find_next_splitpoint_x_r(ord_t* retval, lqt_point* begin, lqt_point* end, size_t sample_rate, ord_t max) {
+static void lkt_find_next_splitpoint_x_r(ord_t* retval, lkt_point* begin, lkt_point* end, size_t sample_rate, ord_t max) {
   double average = 0.0;
   size_t samples_taken = 0;
   const size_t sample_distance = ((end - begin) / sample_rate) + 1;
-  for(lqt_point* i = begin; i < end; i += sample_distance, ++samples_taken) {
+  for(lkt_point* i = begin; i < end; i += sample_distance, ++samples_taken) {
     if(i->x > max)
       continue;
     average += i->x;
@@ -98,8 +100,8 @@ static void lkt_find_next_splitpoint_x_r(ord_t* retval, lqt_point* begin, lqt_po
 }
 
 /// DO NOT change this to use the XOR method. It is slow.
-static inline void lkt_swap(lqt_point* a, lqt_point* b) {
-  lqt_point old_a = *a;
+static inline void lkt_swap(lkt_point* a, lkt_point* b) {
+  lkt_point old_a = *a;
   *a = *b;
   *b = old_a;
 }
@@ -108,17 +110,17 @@ static inline size_t get_heap_child_l(const size_t i) {return i * 2 + 1;}
 static inline size_t get_heap_child_r(const size_t i) {return i * 2 + 2;}
 static inline size_t get_heap_parent(const size_t i) {return (i - 1) / 2;}
 
-static bool point_comparator_x(const lqt_point& a, const lqt_point& b) {
+static bool point_comparator_x(const lkt_point& a, const lkt_point& b) {
   return a.x < b.x;
 }
 
-static bool point_comparator_y(const lqt_point& a, const lqt_point& b) {
+static bool point_comparator_y(const lkt_point& a, const lkt_point& b) {
   return a.y < b.y;
 }
 
 /// \todo change splits to use copied double buffer, for parallel execution
 /// \param sample_rate the rate to sample when finding the split point
-static void lkt_sort_parallel(lqt_point* points, size_t len, /* lqt_point* buffer, */
+static void lkt_sort_parallel(lkt_point* points, size_t len, /* lkt_point* buffer, */
                      size_t sample_rate, lkt_split_point* splitpoints, ord_t splitpoint, size_t splitpoint_i, 
                      bool xaxis, 
                      const unsigned short current_depth, const unsigned short max_depth) {
@@ -135,16 +137,16 @@ static void lkt_sort_parallel(lqt_point* points, size_t len, /* lqt_point* buffe
   if(len < 2 || current_depth == max_depth || splitpoint_i > len)
     return;
 
-//  memcpy(buffer, points, sizeof(lqt_point) * len);
+//  memcpy(buffer, points, sizeof(lkt_point) * len);
 
   // splitpoint is the value in the points array, by which the points will be partitioned
   // splitpoint_i is the index into the splitpoints array, of the current split.
   // splitpoint_val is the (local) index in the points array, before which values are less than splitpoint.
 
-  const lqt_point splitpoint_point = {splitpoint, splitpoint, 0}; // cheaper to just assign both, than a conditional
+  const lkt_point splitpoint_point = {splitpoint, splitpoint, 0}; // cheaper to just assign both, than a conditional
 
-  typedef void (*splitpoint_finder_func_t)(ord_t* retval, lqt_point* begin, lqt_point* end, size_t sample_rate, ord_t min);
-  typedef bool (*comparator_func_t)(const lqt_point&, const lqt_point&);
+  typedef void (*splitpoint_finder_func_t)(ord_t* retval, lkt_point* begin, lkt_point* end, size_t sample_rate, ord_t min);
+  typedef bool (*comparator_func_t)(const lkt_point&, const lkt_point&);
 
   ord_t          next_split_l;
   ord_t          next_split_r;
@@ -190,7 +192,7 @@ static void lkt_sort_parallel(lqt_point* points, size_t len, /* lqt_point* buffe
 }
 
 /// returns a heap
-linear_kdtree lkt_create_parallel(lqt_point* points, size_t len) {
+linear_kdtree lkt_create_parallel(lkt_point* points, size_t len) {
 //  fprintf(stderr, "lkt_create called for points %p, true end %p \n", (void*)points, (void*)(points + len));
 
   if(sizeof(mortoncode_t) != 4) {
@@ -220,7 +222,7 @@ linear_kdtree lkt_create_parallel(lqt_point* points, size_t len) {
 
 //  fprintf(stderr, "lkt_create sorting\n");
 
-//  lqt_point* buffer = new lqt_point[len];
+//  lkt_point* buffer = new lkt_point[len];
 
   lkt_sort_parallel(points, len, /* buffer, */ sample_rate, tree.split_points, initial_splitpoint, initial_splitpoint_i, true, 0, depth);
 
@@ -235,7 +237,7 @@ linear_kdtree lkt_create_parallel(lqt_point* points, size_t len) {
 }
 
 /// \return array of morton codes, of len length. Caller takes ownership.
-mortoncode_t* lkt_create_mortoncodes_parallel(lqt_point* points, size_t len, lkt_split_point* split_points, size_t split_points_len, size_t split_depth) {
+mortoncode_t* lkt_create_mortoncodes_parallel(lkt_point* points, size_t len, lkt_split_point* split_points, size_t split_points_len, size_t split_depth) {
   if(sizeof(mortoncode_t) * CHAR_BIT < split_depth) {
     fprintf(stderr, "mortoncode_t LESS THAN split_depth! ERROR!ERROR!ERROR!"); /// \todo fix to be static_assert
     exit(1);
@@ -250,7 +252,7 @@ mortoncode_t* lkt_create_mortoncodes_parallel(lqt_point* points, size_t len, lkt
 /*
   for(size_t i = 0, end = len; i != end; ++i) { /// \todo vectorize
     mortoncode_t code = 0;
-    const lqt_point point = points[i];
+    const lkt_point point = points[i];
 
 //    fprintf(stderr, "lkt_create_mortoncodes point {%f, %f}\n", point.x, point.y);
 
@@ -283,7 +285,7 @@ mortoncode_t* lkt_create_mortoncodes_parallel(lqt_point* points, size_t len, lkt
 
 /*
 // x value ALONE is used for comparison, to create an xpack
-bool operator<(const lqt_point& rhs, const lqt_point& lhs) {
+bool operator<(const lkt_point& rhs, const lkt_point& lhs) {
   return rhs.x < lhs.x;
 }
 
@@ -301,7 +303,7 @@ linear_quadtree_unified tbb_sortify_unified(linear_quadtree_unified lqt, const s
 }
 
 /// does not block for GPU memory. Will fail, if GPU memory is insufficient.
-linear_quadtree_unified lqt_create_heterogeneous(lqt_point* points, size_t len, 
+linear_quadtree_unified lqt_create_heterogeneous(lkt_point* points, size_t len, 
                                                        ord_t xstart, ord_t xend, 
                                                        ord_t ystart, ord_t yend,
                                                        size_t* depth, const size_t threads) {
