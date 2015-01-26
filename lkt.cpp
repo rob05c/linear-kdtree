@@ -8,7 +8,7 @@
 using std::cout;
 using std::endl;
 
-static size_t splitpoints_min = 100000;
+//static size_t splitpoints_min = 100000;
 
 void lkt_delete(linear_kdtree tree) {
   delete[] tree.points;
@@ -16,8 +16,10 @@ void lkt_delete(linear_kdtree tree) {
   delete[] tree.morton_codes;
 }
 
-/// \todo change these to C++ and use templates. Or Macros. Something.
 
+
+/// \todo change these to C++ and use templates. Or Macros. Something.
+/*
 /// finds a heuristic value, using the given sample rate, splitting on the x-axis
 static ord_t lkt_find_splitpoint_x(lkt_point* begin, lkt_point* end, size_t sample_rate) {
   double average = 0.0;
@@ -28,7 +30,7 @@ static ord_t lkt_find_splitpoint_x(lkt_point* begin, lkt_point* end, size_t samp
   average /= samples_taken;
   return average;
 }
-/*
+
 /// finds a heuristic value, using the given sample rate, splitting on the y-axis
 static ord_t lkt_find_splitpoint_y(lkt_point* begin, lkt_point* end, size_t sample_rate) {
   double average = 0.0;
@@ -39,7 +41,7 @@ static ord_t lkt_find_splitpoint_y(lkt_point* begin, lkt_point* end, size_t samp
   average /= samples_taken;
   return average;
 }
-*/
+
 /// find the next splitpoint on the y axis, ignoring values less than the given min
 static ord_t lkt_find_next_splitpoint_y_l(lkt_point* begin, lkt_point* end, size_t sample_rate, ord_t min) {
   double average = 0.0;
@@ -92,10 +94,11 @@ static ord_t lkt_find_next_splitpoint_x_r(lkt_point* begin, lkt_point* end, size
   average /= samples_taken;
   return average;
 }
+*/
 
-/// DO NOT change this to use the XOR method. It is slow.
-static inline void lkt_swap(lkt_point* a, lkt_point* b) {
-  lkt_point old_a = *a;
+template <typename T>
+inline void lkt_swap(T* a, T* b) {
+  T old_a = *a;
   *a = *b;
   *b = old_a;
 }
@@ -185,7 +188,7 @@ size_t quicksort_partition(lkt_point* points, const size_t len, const ord_t pivo
   if(j < 0)
     j = 0;
 
-/*
+
   // debug - sanity check
   if(len > 1) {
     for(long k = 0, kend = j; k != kend; ++k) {
@@ -212,10 +215,12 @@ size_t quicksort_partition(lkt_point* points, const size_t len, const ord_t pivo
     }
   }
 //  fprintf(stderr, "quicksort_partitioned on %ld\n", j);
-*/
+
 
   return j;
 }
+
+/*
 
 static inline size_t get_heap_child_l(const size_t i) {return i * 2 + 1;}
 static inline size_t get_heap_child_r(const size_t i) {return i * 2 + 2;}
@@ -226,8 +231,8 @@ static inline size_t get_heap_parent(const size_t i) {return (i - 1) / 2;}
 /// \param splitpoints the array of split points, tracking the index and coordinate of each split. A heap.
 /// \param splitpoint the coordinate of this split
 /// \param splitpoint_i the index of this splitpoint in the splitpoints array
-static void lkt_sort(lkt_point* points, size_t len, 
-                     size_t sample_rate, lkt_split_point* splitpoints, ord_t splitpoint, size_t splitpoint_i, 
+static void lkt_sort(lkt_point* points, size_t len, size_t sample_rate, 
+                     fixlentree<lkt_split_point>& splitpoints, index_t splitpoint_parent, bool splitpoint_thisisleft,
                      bool xaxis, 
                      const unsigned short current_depth, const unsigned short max_depth) {
 //  fprintf(stderr, "lkt_sort called for splitpoint %f\n", splitpoint);
@@ -238,13 +243,8 @@ static void lkt_sort(lkt_point* points, size_t len,
 //  fprintf(stderr, "sort at splitpoint_i = %lu\n", splitpoint_i);
 //  fflush(stdout);
 
-  const size_t splitpoints_len = std::max(len, splitpoints_min);
-
-  cout << "sort - current_depth: " << current_depth << " splitpoint_i:" << splitpoint_i << " len: " << len << " splitpoints_len: " << splitpoints_len << endl;
-
-//  if(len < 2 || current_depth == max_depth || splitpoint_i >= splitpoints_len)
-  if(len < 2 || splitpoint_i >= splitpoints_len) {
-    cout << "RETURNING - len < 2 or splitpoint_i too big" << endl;
+  if(len < 2) {
+    cout << "RETURNING - len < 2" << endl;
     return;
   }
 
@@ -268,12 +268,12 @@ static void lkt_sort(lkt_point* points, size_t len,
   }
 
 
-/*
-  if(splitpoint_val == 0 || splitpoint_val == len) {
-    fprintf(stderr, "not setting splitpoints: splitpoint_val is %lu", splitpoint_val);
-    return;
-  }
-*/
+
+//  if(splitpoint_val == 0 || splitpoint_val == len) {
+//    fprintf(stderr, "not setting splitpoints: splitpoint_val is %lu", splitpoint_val);
+//    return;
+//  }
+
 //  fprintf(stderr, "DEBUG: setting splitpoints[%lu] = {%lu,%f}\n", splitpoint_i, splitpoint_val, splitpoint);
 
 //  fprintf(stderr, "lkt_sort [%lu:%lu) recursing [%lu:%lu) and [%lu:%lu)\n", 0ul, len,  0ul, splitpoint_val, splitpoint_val, splitpoint_val + (len - splitpoint_val));
@@ -313,7 +313,7 @@ linear_kdtree lkt_create(lkt_point* points, size_t len) {
 //  fprintf(stderr, "lkt_create depth %lu\n", (size_t)depth);
 //  fprintf(stderr, "lkt_create split_points_len %lu\n", (size_t)tree.split_points_len);
 //  fprintf(stderr, "lkt_create newing split_points size %lu\n", sizeof(lkt_split_point) * tree.split_points_len);
-  tree.split_points = new lkt_split_point[tree.split_points_len];
+  tree.split_points = new fixlentree<lkt_split_point>::node[tree.split_points_len];
 //  fprintf(stderr, "lkt_create newed split_points\n");
   tree.split_depth = depth;
   memset(tree.split_points, '\0', sizeof(lkt_split_point) * tree.split_points_len); // debug
@@ -376,3 +376,4 @@ mortoncode_t* lkt_create_mortoncodes(lkt_point* points, size_t len, lkt_split_po
 
   return codes;
 }
+*/

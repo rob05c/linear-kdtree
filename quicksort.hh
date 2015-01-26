@@ -49,7 +49,11 @@ bool block_is_greater(const T* block, const size_t len, const T& pivot, bool (*c
 
 template <typename T>
 uint_least64_t get_block_end(const T* array, const T* end, const uint_least64_t block_size, uint_least64_t block_i) {
-  return  &array[block_i * block_size + block_size] >= end ? (end - array) - block_i * block_size : block_size;
+  uint_least64_t blockend = &array[block_i * block_size + block_size] >= end ? (end - array) - block_i * block_size : block_size;
+  if(blockend > 1000000000) {
+    printf("\n");
+  }
+  return  blockend;
 }
 
 
@@ -78,7 +82,7 @@ void test_partitioner(T* array, T* array_end, const T& pivot, const size_t block
                       const uint_least64_t remaining_blocks_len, const uint_least64_t* remaining_block_indices, bool (*comparator)(const T&, const T&)) {
   cout << "test_partitioner" << endl;
 
-  const size_t num_blocks = ceil((double)(array_end - array) / BLOCK_SIZE);
+  const size_t num_blocks = ceil((double)(array_end - array) / block_size);
   const size_t len = array_end - array;
 
   cout << "left_block_pos:" << left_block_pos << endl;
@@ -121,14 +125,24 @@ static uint_least64_t get_left_block(std::atomic_uint_least64_t* next_left_block
   const uint_least64_t lblock = next_left_block->fetch_add(1);
   const uint_least64_t rblock = next_right_block->load() + 1; // +1 because load() is one greater than the last block someone has (they fetched-and-subbed).
   const uint_least64_t next = lblock >= rblock ? block_end : lblock;
+  if(next != block_end && next > 1000000000) {
+    printf("\n"); // debug
+  }
+
   return next;
 }
 
 /// \return index of the next right block, or block_end if there are no left blocks left.
 static uint_least64_t get_right_block(std::atomic_uint_least64_t* next_right_block, const std::atomic_uint_least64_t* next_left_block) {
-  const uint_least64_t rblock = next_right_block->fetch_sub(1);
+  uint_least64_t rblock = next_right_block->fetch_sub(1); 
+  if(rblock > block_end - 100000) ///< if overflow, set to 0. Yes, 100,000 is a hack.
+    rblock = 0;
   const uint_least64_t lblock = next_left_block->load() - 1; // -1 because load() is one less than the last block someone has (they fetched-and-added).
   const uint_least64_t next = rblock <= lblock ? block_end : rblock;
+
+  if(next != block_end && next > 1000000000) {
+    printf("\n"); // debug
+  }
   return next;
 }
 
@@ -223,6 +237,9 @@ uint_least64_t neutralise_remaining(T* array, T* array_end, const size_t block_s
     std::swap_ranges(&array[li * block_size], &array[li * block_size + lend], &array[ri * block_size]);
 //    cout << "swapped blocks " << endl;
   };
+
+  if(remaining_blocks == 0)
+    return left_block_pos * block_size;
 
   uint_least64_t* remaining_end = &remaining_block_indices[remaining_blocks];
 
@@ -386,9 +403,85 @@ void test_partitioned(T* array, T* end, const T& pivot, const uint_least64_t pos
   }
 }
 
-/// \param retval[out] the position of the partition. Parametertised because TBB.
+/// DO NOT change this to use the XOR method. It is slow.
 template <typename T>
-void parallel_quicksort_partition(uint_least64_t* retval, T* array, T* end, const T& pivot, size_t threads, bool (*comparator)(const T&, const T&)) {
+inline void partition_swap(T* a, T* b) {
+  T old_a = *a;
+  *a = *b;
+  *b = old_a;
+}
+
+/// \todo make static, once tested
+/// \todo replace with parallel algorithm
+/// Unlike traditional quicksort partition, We don't actually use a pivot, since we only have the value to partion, not an element.
+/// \param xaxis partition based on the x-axis. Else, the y-axis.
+/// \return the index of the partition. Everything less than pivot_value is before the returned index. points[return] is the first element greater than pivot_value
+template <typename T>
+uint_least64_t serial_quicksort_partition(T* array, const size_t len, const T& pivot, bool (*comparator)(const T&, const T&)) {
+//  const size_t pivot_index = points + len - 1;
+//  const lkt_point* pivot_value = points[pivot_index];
+//  lkt_swap(pivot_value, points[len - 1]);
+//  if(len == 2)
+//    return 1;
+//  fprintf(stderr, "quicksort_partitioned for len %lu\n", len);
+
+  if(len < 2)
+    return 0;
+
+
+
+  long i = 0;
+  long j = len - 1;
+
+//  cout << "serial_quicksort_partition len: " << len << " i: " << i << " j: " << j << endl;
+
+//  if(len == 2) {
+//    cout << "array[0]: " << array[0].x << "," << array[0].y << " array[1]: " << array[1].x << "," << array[1].y << endl;
+//  }
+
+  while(i < j) {
+    for(; comparator(array[i], pivot) && i < (long)len; ++i);
+    if(i >= (long)len)
+      break;
+    for(; comparator(pivot, array[j]) && j > -1; --j);
+    if(j <= 0)
+      break; 
+    partition_swap(&array[i], &array[j]);
+    ++i; // important - if not, duplicate values will loop forever
+    //  --j;
+  }
+  
+//  cout << "serial_quicksort_partition loop finished" << endl;
+
+  // swap i,j such that j is the greater
+  if(i > j) {
+    int old_i = i;
+    i = j;
+    j = old_i;
+  }
+
+  if(j > 0) {
+    if(i > j) {
+      if(comparator(array[i], pivot) || comparator(pivot, array[j])) // less than, because i is now greater than j.
+        partition_swap(&array[i], &array[j]);
+    } else {
+      if(comparator(array[j], pivot) || comparator(pivot, array[i])) // less than, because i is now greater than j.
+        partition_swap(&array[i], &array[j]);
+    }
+  }
+
+  if(j < 0)
+    j = 0;
+
+  return j;
+}
+
+template <typename T>
+uint_least64_t parallel_quicksort_partition(T* array, T* end, const T& pivot, size_t threads, bool (*comparator)(const T&, const T&)) {
+  if((end - array) < BLOCK_SIZE * 2) {
+    return serial_quicksort_partition(array, end - array, pivot, comparator);
+  }
+
   const size_t num_blocks = ceil((double)(end - array) / BLOCK_SIZE);
 
   std::unique_ptr<uint_least64_t> remaining_block_indices(new uint_least64_t[threads]);
@@ -437,8 +530,7 @@ void parallel_quicksort_partition(uint_least64_t* retval, T* array, T* end, cons
   // debug
 //  test_partitioned(array, end, pivot, pos, comparator);
 
-  *retval = pos;
+  return pos;
 }
-
 
 #endif // quicksort_hh

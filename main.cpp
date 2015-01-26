@@ -25,19 +25,32 @@ std::ostream& operator<<(std::ostream& s, const lkt_point& p) {
   return s;
 }
 
-/// \todo fix
-template <typename T>
-void print_fixlentree_node(const typename fixlentree<T>::node& n) {
-  cout << "[" << n.value << ", " << n.right << ", " << n.left << "]";
+std::ostream& operator<<(std::ostream& s, const lkt_split_point& p) {
+  s << "{" << p.value << ", " << p.index << "}";
+  return s;
 }
 
 template <typename T>
-void print_fixlentree(const fixlentree<T>& tree) {
+static void print_fixlentree(const fixlentree<T>& tree) {
   cout << "{" << endl;
   const typename fixlentree<T>::node* nodes = tree.get_array();
   for(int i = 0, end = tree.size(); i != end; ++i) {
     const typename fixlentree<T>::node& n = nodes[i];
-    cout << "[" << n.value << ", " << n.right << ", " << n.left << "]";
+    cout << "[" << n.value << ", ";
+
+    if(n.right != fixlentree<T>::tree_end)
+      cout << n.right;
+    else
+      cout << "-";
+    cout << ", ";
+
+    if(n.left != fixlentree<T>::tree_end)
+      cout << n.left;
+    else
+      cout << "-";
+
+    cout << "]";
+
     cout << endl;
   }
   cout << "}" << endl;
@@ -72,11 +85,24 @@ static inline void print_points_codes(lkt_point* points, mortoncode_t* codes, co
   }
 }
 
-static inline void print_splitpoints(lkt_split_point* points, const size_t len) {
-  printf("[\n");
-  for(int i = 0, end = len; i != end; ++i)
-    printf("{%d, %lu, %f}\n", i, points[i].index, points[i].value);
-  printf("]\n");
+void print_splitpoints(fixlentree<lkt_split_point>::node* nodes, size_t len) {
+  cout << "{" << endl;
+  for(int i = 0, end = len; i != end; ++i) {
+    const typename fixlentree<lkt_split_point>::node& n = nodes[i];
+    cout << "[" << n.value << ", ";
+    if(n.right != fixlentree<lkt_split_point>::tree_end)
+      cout << n.right;
+    else
+      cout << "-";
+    cout << ", ";
+    if(n.left != fixlentree<lkt_split_point>::tree_end)
+      cout << n.left;
+    else
+      cout << "-";
+    cout << "]";
+    cout << endl;
+  }
+  cout << "}" << endl;
 }
 
 /// \return an array of len points. Caller takes ownership, and must call delete
@@ -93,6 +119,8 @@ static inline lkt_point* create_points(const size_t len, const ord_t min, const 
 
 static inline void test_quicksort_partition(const size_t numPoints, const size_t threads) {
   printf("test_quicksort_partition\n");
+  cout << "test_quicksort_partition undergoing maintenance. Be back soon!" << endl;
+/*
   const size_t len = 25;
   const ord_t min = 0.0;
   const ord_t max = 10.0;
@@ -111,10 +139,13 @@ static inline void test_quicksort_partition(const size_t numPoints, const size_t
   printf("\npivot index: %lu\n", pivot_i);
 
   delete[] points;
+*/
 }
 
 static inline void test_lkt(const size_t len, const size_t threads) {
   printf("test_lkt\n");
+  cout << "test_lkt is down for maintenance" << endl;
+/*
   const ord_t min = 0.0;
   const ord_t max = 100.0;
 
@@ -132,6 +163,7 @@ static inline void test_lkt(const size_t len, const size_t threads) {
   printf("\n\nlkt splitpoints:\n");
   print_splitpoints(lkt.split_points, lkt.split_points_len);
   lkt_delete(lkt);
+*/
 }
 
 static inline void test_lkt_parallel(const size_t len, const size_t threads) {
@@ -142,7 +174,7 @@ static inline void test_lkt_parallel(const size_t len, const size_t threads) {
   lkt_point* points = create_points(len, min, max);
 
   printf("created points:\n");
-  print_points(points, len);
+//  print_points(points, len);
   printf("creating lkt:\n");
 
   linear_kdtree lkt = lkt_create_parallel(points, len);
@@ -150,17 +182,16 @@ static inline void test_lkt_parallel(const size_t len, const size_t threads) {
   printf("\n\nlkt points:\n");
   print_points_codes(lkt.points, lkt.morton_codes, lkt.len);
 
-  fflush(stdout);
   printf("\n\nlkt splitpoints:\n");
   print_splitpoints(lkt.split_points, lkt.split_points_len);
-  printf("\n\nlkt splitpoints:\n");
-  print_splitpoints(lkt.split_points, lkt.split_points_len);
-  printf("FIN\n");
+
   lkt_delete(lkt);
 }
 
 static inline void test_lkt_compare(const size_t len, const size_t threads) {
-  cout << "test_lkt_compare\n" << endl;
+  cout << "test_lkt_compare" << endl;
+  cout << "What are you looking at?" << endl;
+/*
   const ord_t min = 0.0;
   const ord_t max = 100.0;
 
@@ -188,10 +219,8 @@ static inline void test_lkt_compare(const size_t len, const size_t threads) {
   cout << "mimd time (ms): " << pelapsed_ms << endl;
 
   printf("\n");
-
+*/
 }
-
-
 
 static bool point_comparator_x(const lkt_point& a, const lkt_point& b) {
   return a.x < b.x;
@@ -225,7 +254,7 @@ static inline void test_quicksort_compare(const size_t len, const size_t threads
   lkt_point* points = create_points(len, min, max);
   lkt_point* points2 = new lkt_point[len];
   lkt_point pivot = {50.0, 50.0, ~0};
-  uint_least64_t splitpoint_val;
+
   memcpy(points2, points, sizeof(lkt_point) * len);
   printf("quicksorting\n");
 
@@ -238,7 +267,7 @@ static inline void test_quicksort_compare(const size_t len, const size_t threads
 
   printf("parallel quicksorting\n");
   const auto pstart = std::chrono::high_resolution_clock::now();
-  parallel_quicksort_partition(&splitpoint_val, points2, &points2[len], pivot, threads, &point_comparator_x);
+  parallel_quicksort_partition(points2, &points2[len], pivot, threads, &point_comparator_x);
   const auto pend = std::chrono::high_resolution_clock::now();
   const auto pelapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(pend - pstart).count();
   delete[] points2;
@@ -344,7 +373,8 @@ static void print_usage(const char* app_name) {
 }
 
 int main(const int argc, const char** argv) {
-  const time_t now = time(NULL);
+  //  const time_t now = time(NULL);
+  const time_t now = 1422251841; // debug freeze at 10 000 000
 //  const time_t now = 1420954039; // debug fail with 100 elements!!
   cout << "seed: " << now << endl;
   srand(now); // constant seed for debugging

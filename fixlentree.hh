@@ -20,9 +20,10 @@ typedef size_t index_t;
 template <typename T>
 class fixlentree {
 public:
-  const index_t tree_end = std::numeric_limits<index_t>::max();
+  static const index_t tree_end = std::numeric_limits<index_t>::max();
 
   struct node {
+//    static const index_t tree_end = fixlentree<T>::tree_end;
     T       value;
     index_t right;
     index_t left;
@@ -35,13 +36,14 @@ public:
   {}
 
   /// result is undefined if the root already exists.
+  /// result is undefined if release() has been called.
   /// \return the index of the root.
   index_t insert_root(const T& val) {
     const index_t pos = node_acquirer_->fetch_add(1);
     node* node = &array_[pos];
     node->value = val;
-    node->right = 0;
-    node->left  = 0;
+    node->right = tree_end;
+    node->left  = tree_end;
     return pos;
   }
 
@@ -54,8 +56,8 @@ public:
     
     node* node = &array_[pos];
     node->value = val;
-    node->right = 0;
-    node->left  = 0;
+    node->right = tree_end;
+    node->left  = tree_end;
 
     /// \todo replace conditional with arithmetic?
     if(left)
