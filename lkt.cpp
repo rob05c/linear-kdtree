@@ -8,93 +8,11 @@
 using std::cout;
 using std::endl;
 
-//static size_t splitpoints_min = 100000;
-
 void lkt_delete(linear_kdtree tree) {
   delete[] tree.points;
   delete[] tree.split_points;
   delete[] tree.morton_codes;
 }
-
-
-
-/// \todo change these to C++ and use templates. Or Macros. Something.
-/*
-/// finds a heuristic value, using the given sample rate, splitting on the x-axis
-static ord_t lkt_find_splitpoint_x(lkt_point* begin, lkt_point* end, size_t sample_rate) {
-  double average = 0.0;
-  size_t samples_taken = 0;
-  for(lkt_point* i = begin; i < end; i += sample_rate, ++samples_taken) {
-    average += i->x;
-  }
-  average /= samples_taken;
-  return average;
-}
-
-/// finds a heuristic value, using the given sample rate, splitting on the y-axis
-static ord_t lkt_find_splitpoint_y(lkt_point* begin, lkt_point* end, size_t sample_rate) {
-  double average = 0.0;
-  size_t samples_taken = 0;
-  for(lkt_point* i = begin; i < end; i += sample_rate, ++samples_taken) {
-    average += i->y;
-  }
-  average /= samples_taken;
-  return average;
-}
-
-/// find the next splitpoint on the y axis, ignoring values less than the given min
-static ord_t lkt_find_next_splitpoint_y_l(lkt_point* begin, lkt_point* end, size_t sample_rate, ord_t min) {
-  double average = 0.0;
-  size_t samples_taken = 0;
-  const size_t sample_distance = ((end - begin) / sample_rate) + 1;
-  for(lkt_point* i = begin; i < end; i += sample_distance, ++samples_taken) {
-    if(i->y < min)
-      continue;
-    average += i->y;
-  }
-  average /= samples_taken;
-  return average;
-}
-/// find the next splitpoint on the y axis, ignoring values greater than the given max
-static ord_t lkt_find_next_splitpoint_y_r(lkt_point* begin, lkt_point* end, size_t sample_rate, ord_t max) {
-  double average = 0.0;
-  size_t samples_taken = 0;
-  const size_t sample_distance = ((end - begin) / sample_rate) + 1;
-  for(lkt_point* i = begin; i < end; i += sample_distance, ++samples_taken) {
-    if(i->y > max)
-      continue;
-    average += i->y;
-  }
-  average /= samples_taken;
-  return average;
-}
-/// find the next splitpoint on the x axis, ignoring values less than the given min
-static ord_t lkt_find_next_splitpoint_x_l(lkt_point* begin, lkt_point* end, size_t sample_rate, ord_t min) {
-  double average = 0.0;
-  size_t samples_taken = 0;
-  const size_t sample_distance = ((end - begin) / sample_rate) + 1;
-  for(lkt_point* i = begin; i < end; i += sample_distance, ++samples_taken) {
-    if(i->x < min)
-      continue;
-    average += i->x;
-  }
-  average /= samples_taken;
-  return average;
-}
-/// find the next splitpoint on the x axis, ignoring values greater than the given max
-static ord_t lkt_find_next_splitpoint_x_r(lkt_point* begin, lkt_point* end, size_t sample_rate, ord_t max) {
-  double average = 0.0;
-  size_t samples_taken = 0;
-  const size_t sample_distance = ((end - begin) / sample_rate) + 1;
-  for(lkt_point* i = begin; i < end; i += sample_distance, ++samples_taken) {
-    if(i->x > max)
-      continue;
-    average += i->x;
-  }
-  average /= samples_taken;
-  return average;
-}
-*/
 
 template <typename T>
 inline void lkt_swap(T* a, T* b) {
