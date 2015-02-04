@@ -39,8 +39,7 @@ linear_kdtree lkt_create(lkt_point* points, size_t len);
 size_t quicksort_partition(lkt_point* points, const size_t len, const ord_t pivot_value, const bool xaxis);
 mortoncode_t* lkt_create_mortoncodes(lkt_point* points, size_t len, lkt_split_point* split_points, size_t split_points_len, size_t split_depth);
 
-mortoncode_t* lkt_create_mortoncodes_parallel(lkt_point* points, size_t len, fixlentree<lkt_split_point>::node* split_points, size_t split_points_len, size_t split_depth);
-
+mortoncode_t* lkt_create_mortoncodes_parallel(lkt_point* points, size_t len, const fixlentree<lkt_split_point>::node* split_points);
 linear_kdtree lkt_create_parallel(lkt_point* points, size_t len);
 
 #ifdef __cplusplus

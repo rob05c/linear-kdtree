@@ -132,6 +132,7 @@ lkt_sort_parallel(points + splitpoint_val, len - splitpoint_val, sample_rate,
 
 /// returns a heap
 linear_kdtree lkt_create_parallel(lkt_point* points, size_t len) {
+
   const size_t PARALLEL_QUICKSORT_THREADS = 8;
 
   fprintf(stderr, "lkt_create called for points %p, true end %p \n", (void*)points, (void*)(points + len));
@@ -194,58 +195,15 @@ linear_kdtree lkt_create_parallel(lkt_point* points, size_t len) {
 
   fprintf(stderr, "lkt_create coding\n");
 
-  tree.morton_codes = lkt_create_mortoncodes_parallel(tree.points, tree.len, tree.split_points, tree.split_points_len, max_depth);
+
+
+
+
+  tree.morton_codes = lkt_create_mortoncodes_parallel(tree.points, tree.len, tree.split_points);
 
 //  fprintf(stderr, "lkt_create returning\n");
   return tree;
 }
-
-/// \return array of morton codes, of len length. Caller takes ownership.
-mortoncode_t* lkt_create_mortoncodes_parallel(lkt_point* points, size_t len, fixlentree<lkt_split_point>::node* splitpoints, size_t splitpoints_len, size_t split_depth) {
-  if(sizeof(mortoncode_t) * CHAR_BIT < split_depth) {
-    fprintf(stderr, "mortoncode_t LESS THAN split_depth! ERROR!ERROR!ERROR!"); /// \todo fix to be static_assert
-    exit(1);
-  }
-
-//  fprintf(stderr, "lkt_create_mortoncodes len %lu, split_points_len %lu, split_depth %lu\n", len, split_points_len, split_depth);
-
-  mortoncode_t* codes = new mortoncode_t[len];
-
-//  return codes; // debug !! undo !!
-
-  for(size_t i = 0, end = len; i != end; ++i) { /// \todo vectorize
-    mortoncode_t code = 0;
-
-    const lkt_point& point = points[i];
-//    fprintf(stderr, "lkt_create_mortoncodes point {%f, %f}\n", point.x, point.y);
-
-    bool is_x = true;
-    size_t code_i = 0;
-    for(index_t j = 0; j != fixlentree<lkt_split_point>::tree_end;) {
-//      fprintf(stderr, "j: %lu", j);
-      const lkt_split_point& splitpoint = splitpoints[j].value;
-      const bool             left       = is_x ? point.x < splitpoint.value : point.y < splitpoint.value;
-
-      code = code | (left << code_i);
-
-      j = splitpoints[j].left * left + splitpoints[j].right * !left;
-      is_x = !is_x;
-      ++code_i;
-    }
-
-//      fprintf(stderr, "\tj %d,\tsplitpoint_pos %ld,\tsplitpoint_val %f,\t%s,\tp_ord %f,\t%s, code %u\n", j, split_pos, split_point_val, xaxis ? "x" : "y", point_ord, left ? "left" : "right", code);
-    
-//    fprintf(stderr, "lkt_create_mortoncodes j %d code_size %lu \n", j, (size_t)(sizeof(mortoncode_t) * CHAR_BIT));
-//    fprintf(stderr, "lkt_create_mortoncodes shifting the remaining %lu\n", (size_t)(sizeof(mortoncode_t) * CHAR_BIT - j - 1));
-//    code = code << (sizeof(mortoncode_t) * CHAR_BIT - j - 1); // shift the rest of the int, so the most-significant-bit is the first split pos
-
-//    fprintf(stderr, "lkt_create_mortoncodes code %lu: %u\n", i, code);
-    codes[i] = code;
-  }
-
-  return codes;
-}
-
 
 /*
 // x value ALONE is used for comparison, to create an xpack
