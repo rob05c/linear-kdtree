@@ -190,8 +190,7 @@ static inline void test_lkt_parallel(const size_t len, const size_t threads) {
 
 static inline void test_lkt_compare(const size_t len, const size_t threads) {
   cout << "test_lkt_compare" << endl;
-  cout << "What are you looking at?" << endl;
-/*
+
   const ord_t min = 0.0;
   const ord_t max = 100.0;
 
@@ -201,6 +200,7 @@ static inline void test_lkt_compare(const size_t len, const size_t threads) {
 
   cout << "created points:" << endl;
 
+/*
   cout << "creating lkt:" << endl;
   const auto start = std::chrono::high_resolution_clock::now();
   linear_kdtree lkt = lkt_create(points, len);
@@ -208,6 +208,7 @@ static inline void test_lkt_compare(const size_t len, const size_t threads) {
   const auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
   cout << "sisd time (ms): " << elapsed_ms << endl;
   lkt_delete(lkt);
+*/
 
   cout << "creating parallel lkt:" << endl;
   const auto pstart = std::chrono::high_resolution_clock::now();
@@ -219,7 +220,6 @@ static inline void test_lkt_compare(const size_t len, const size_t threads) {
   cout << "mimd time (ms): " << pelapsed_ms << endl;
 
   printf("\n");
-*/
 }
 
 static bool point_comparator_x(const lkt_point& a, const lkt_point& b) {
