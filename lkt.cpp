@@ -112,186 +112,46 @@ size_t quicksort_partition(lkt_point* points, const size_t len, const ord_t pivo
     for(long k = 0, kend = j; k != kend; ++k) {
       if(xaxis) {
         if(points[k].x > pivot_value) {
-//          fprintf(stderr, "quicksort_partitioned ERROR: SORT FAILED i %ld j %ld k %ld\n", i, j, k);
+          fprintf(stderr, "quicksort_partitioned ERROR: SORT FAILED i %ld j %ld k %ld\n", i, j, k);
         }
       } else {
         if(points[k].y > pivot_value) {
-//          fprintf(stderr, "quicksort_partitioned ERROR: SORT FAILED i %ld j %ld k %ld\n", i, j, k);
+          fprintf(stderr, "quicksort_partitioned ERROR: SORT FAILED i %ld j %ld k %ld\n", i, j, k);
         }
       }
     }
     for(long k = j, kend = len; k != kend; ++k) {
       if(xaxis) {
         if(points[k].x < pivot_value) {
-//          fprintf(stderr, "quicksort_partitioned ERROR: SORT FAILED i %ld j %ld k %ld\n", i, j, k);
+          fprintf(stderr, "quicksort_partitioned ERROR: SORT FAILED i %ld j %ld k %ld\n", i, j, k);
         }
       } else {
         if(points[k].y < pivot_value) {
-//          fprintf(stderr, "quicksort_partitioned ERROR: SORT FAILED i %ld j %ld k %ld\n", i, j, k);
+          fprintf(stderr, "quicksort_partitioned ERROR: SORT FAILED i %ld j %ld k %ld\n", i, j, k);
         }
       }
     }
   }
 //  fprintf(stderr, "quicksort_partitioned on %ld\n", j);
-
-
   return j;
 }
 
-/*
-
-static inline size_t get_heap_child_l(const size_t i) {return i * 2 + 1;}
-static inline size_t get_heap_child_r(const size_t i) {return i * 2 + 2;}
-static inline size_t get_heap_parent(const size_t i) {return (i - 1) / 2;}
-
-/// \todo change splits to use copied double buffer, for parallel execution
-/// \param sample_rate the rate to sample when finding the split point
-/// \param splitpoints the array of split points, tracking the index and coordinate of each split. A heap.
-/// \param splitpoint the coordinate of this split
-/// \param splitpoint_i the index of this splitpoint in the splitpoints array
-static void lkt_sort(lkt_point* points, size_t len, size_t sample_rate, 
-                     fixlentree<lkt_split_point>& splitpoints, index_t splitpoint_parent, bool splitpoint_thisisleft,
-                     bool xaxis, 
-                     const unsigned short current_depth, const unsigned short max_depth) {
-//  fprintf(stderr, "lkt_sort called for splitpoint %f\n", splitpoint);
-//  fprintf(stderr, "lkt_sort called for points %p, len %lu\n", (void*)points, len);
-//  fprintf(stderr, "lkt_sort called for splitpoint_i %lu\n", splitpoint_i);
-//  fprintf(stderr, "lkt_sort next splitpoint_is: %lu, %lu\n", get_heap_child_l(splitpoint_i), get_heap_child_r(splitpoint_i));
-
-//  fprintf(stderr, "sort at splitpoint_i = %lu\n", splitpoint_i);
-//  fflush(stdout);
-
-  if(len < 2) {
-    cout << "RETURNING - len < 2" << endl;
-    return;
-  }
-
-  /// \todo fix conditionals
-
-  const ord_t next_split_l = xaxis ? lkt_find_next_splitpoint_x_l(points, points + len, sample_rate, splitpoint)
-    : lkt_find_next_splitpoint_y_l(points, points + len, sample_rate, splitpoint); // parallel
-  const ord_t next_split_r = xaxis ? lkt_find_next_splitpoint_x_r(points, points + len, sample_rate, splitpoint)
-    : lkt_find_next_splitpoint_y_r(points, points + len, sample_rate, splitpoint); // parallel
-
-  /// the position of the partition in the sorted points array.
-  const size_t splitpoint_val = quicksort_partition(points, len, splitpoint, xaxis); // parallel
-
-  cout << "next_split_l: " << next_split_l << " next_split_r: " << next_split_r << " splitpoint_val: " << splitpoint_val << " splitpoint_i:" << splitpoint_i << endl;;
-
-  cout << "SPLIT EVENNESS: " << splitpoint_val << "/" << len << endl;
-
-  if(splitpoint_val == 0 || splitpoint_val == len - 1) {
-    cout << "BREAKING - splitpoint_val = 0 or len" << endl;
-    return;
-  }
-
-
-
-//  if(splitpoint_val == 0 || splitpoint_val == len) {
-//    fprintf(stderr, "not setting splitpoints: splitpoint_val is %lu", splitpoint_val);
-//    return;
-//  }
-
-//  fprintf(stderr, "DEBUG: setting splitpoints[%lu] = {%lu,%f}\n", splitpoint_i, splitpoint_val, splitpoint);
-
-//  fprintf(stderr, "lkt_sort [%lu:%lu) recursing [%lu:%lu) and [%lu:%lu)\n", 0ul, len,  0ul, splitpoint_val, splitpoint_val, splitpoint_val + (len - splitpoint_val));
-
-  splitpoints[splitpoint_i].value = splitpoint;
-  splitpoints[splitpoint_i].index = splitpoint_val;
-
-  // parallel_wait
-
-  lkt_sort(points,             splitpoint_val, sample_rate, 
-           splitpoints, next_split_l, get_heap_child_l(splitpoint_i), 
-           !xaxis, current_depth + 1, max_depth); // parallel
-  lkt_sort(points + splitpoint_val, len - splitpoint_val, sample_rate, 
-           splitpoints, next_split_r, get_heap_child_r(splitpoint_i), 
-           !xaxis, current_depth + 1, max_depth); // parallel
-}
-
-/// returns a heap
-linear_kdtree lkt_create(lkt_point* points, size_t len) {
-//  fprintf(stderr, "lkt_create called for points %p, true end %p \n", (void*)points, (void*)(points + len));
-
-  if(sizeof(mortoncode_t) != 4) {
-    fprintf(stderr, "mortoncode_t NOT 32 BITS! ERROR!ERROR!ERROR!"); /// \todo fix to be static_assert
-    exit(1);
-  }
-
-  const unsigned short depth = sizeof(mortoncode_t) * CHAR_BIT;
-
-  linear_kdtree tree;
-  tree.points = points;
-  tree.len = len;
-  tree.split_points_len = std::max(len, splitpoints_min); // min(len, pow(2, depth)), but the length will always be less. We'd run out of memory before it wasn't.
-
-  cout << "depth = " << depth << endl;
-  cout << "tree.split_points_len = " << tree.split_points_len << endl;
-
-//  fprintf(stderr, "lkt_create depth %lu\n", (size_t)depth);
-//  fprintf(stderr, "lkt_create split_points_len %lu\n", (size_t)tree.split_points_len);
-//  fprintf(stderr, "lkt_create newing split_points size %lu\n", sizeof(lkt_split_point) * tree.split_points_len);
-  tree.split_points = new fixlentree<lkt_split_point>::node[tree.split_points_len];
-//  fprintf(stderr, "lkt_create newed split_points\n");
-  tree.split_depth = depth;
-  memset(tree.split_points, '\0', sizeof(lkt_split_point) * tree.split_points_len); // debug
-
-  const size_t sample_rate = 100;
-  const ord_t initial_splitpoint = lkt_find_splitpoint_x(points, points + len, sample_rate);
-  const size_t initial_splitpoint_i = 0;
-
-//  fprintf(stderr, "lkt_create sorting\n");
-
-  lkt_sort(points, len, sample_rate, tree.split_points, initial_splitpoint, initial_splitpoint_i, true, 0, depth);
-
-//  fprintf(stderr, "lkt_create coding\n");
-
-  tree.morton_codes = lkt_create_mortoncodes(tree.points, tree.len, tree.split_points, tree.split_points_len, depth);
-//  fprintf(stderr, "lkt_create returning\n");
-  return tree;
-}
-
 /// \return array of morton codes, of len length. Caller takes ownership.
-mortoncode_t* lkt_create_mortoncodes(lkt_point* points, size_t len, lkt_split_point* split_points, size_t split_points_len, size_t split_depth) {
-  if(sizeof(mortoncode_t) * CHAR_BIT < split_depth) {
-    fprintf(stderr, "mortoncode_t LESS THAN split_depth! ERROR!ERROR!ERROR!"); /// \todo fix to be static_assert
-    exit(1);
-  }
-
-//  fprintf(stderr, "lkt_create_mortoncodes len %lu, split_points_len %lu, split_depth %lu\n", len, split_points_len, split_depth);
-
+mortoncode_t* lkt_create_mortoncodes_sisd(lkt_point* points, size_t len, const fixlentree<lkt_split_point>::node* splitpoints) {
   mortoncode_t* codes = new mortoncode_t[len];
-//  return codes; // debug !! undo !!
+  for(size_t i = 0, end = len; i != end; ++i) {
+    const lkt_point& point = points[i];
+    mortoncode_t& code = codes[i];
+    code = 0;
+    bool is_x = true;
+    for(size_t code_i = 0, j = 0; j != fixlentree<lkt_split_point>::tree_end; ++code_i, is_x = !is_x) {
+      const lkt_split_point& splitpoint = splitpoints[j].value;
+      const int left = is_x * (point.x < splitpoint.value) + !is_x * (point.y < splitpoint.value);
+      code = code | (left << code_i);
 
-  for(size_t i = 0, end = len; i != end; ++i) { /// \todo vectorize
-    mortoncode_t code = 0;
-    const lkt_point point = points[i];
-
-//    fprintf(stderr, "lkt_create_mortoncodes point {%f, %f}\n", point.x, point.y);
-
-    int j = 0;
-    // in practice, this can be optimised to remove 'j < jend' because we'd run out of memory before using 2^h instead of len(points)
-    for(long jend = split_depth, xaxis = true, split_pos = 0; j < jend && split_pos < (long) split_points_len; ++j, xaxis = !xaxis) {
-      const lkt_split_point splitpoint = split_points[split_pos];
-      const ord_t split_point_val      = splitpoint.value;
-      const ord_t point_ord            = point.x * xaxis + point.y * !xaxis; // xaxis ? point.x : point.y;
-      const unsigned int left          = point_ord < split_point_val;
-
-      code = code | (left << j);
-
-//      fprintf(stderr, "\tj %d,\tsplitpoint_pos %ld,\tsplitpoint_val %f,\t%s,\tp_ord %f,\t%s, code %u\n", j, split_pos, split_point_val, xaxis ? "x" : "y", point_ord, left ? "left" : "right", code);
-
-      split_pos = left ? get_heap_child_l(split_pos) : get_heap_child_r(split_pos);
+      j = splitpoints[j].left * left + splitpoints[j].right * !left;
     }
-    
-////    fprintf(stderr, "lkt_create_mortoncodes j %d code_size %lu \n", j, (size_t)(sizeof(mortoncode_t) * CHAR_BIT));
-////    fprintf(stderr, "lkt_create_mortoncodes shifting the remaining %lu\n", (size_t)(sizeof(mortoncode_t) * CHAR_BIT - j - 1));
-////    code = code << (sizeof(mortoncode_t) * CHAR_BIT - j - 1); // shift the rest of the int, so the most-significant-bit is the first split pos
 
-//    fprintf(stderr, "lkt_create_mortoncodes code %lu: %u\n", i, code);
-    codes[i] = code;
   }
-
   return codes;
 }
-*/

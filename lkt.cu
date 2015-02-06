@@ -40,7 +40,7 @@ __global__ void create_mortoncodes_kernel(lkt_point* points, mortoncode_t* codes
 }
 
 /// \return array of morton codes, of len length. Caller takes ownership.
-mortoncode_t* lkt_create_mortoncodes_parallel(lkt_point* points, size_t len, const fixlentree<lkt_split_point>::node* splitpoints) {
+mortoncode_t* lkt_create_mortoncodes_simd(lkt_point* points, size_t len, const fixlentree<lkt_split_point>::node* splitpoints) {
   const size_t THREADS_PER_BLOCK = 512;
 
   lkt_point*                         cuda_points;

@@ -6,12 +6,17 @@
 #include <string.h>
 #include <iostream>
 #include <chrono>
+#include <vector>
+#include <utility>
 #include <tbb/tbb.h>
 #include "quicksort.hh"
 #include "fixlentree.hh"
 
 using std::cout;
 using std::endl;
+using std::vector;
+using std::pair;
+using std::make_pair;
 
 //#include "quicksort.hh"
 
@@ -177,7 +182,7 @@ static inline void test_lkt_parallel(const size_t len, const size_t threads) {
 //  print_points(points, len);
   printf("creating lkt:\n");
 
-  linear_kdtree lkt = lkt_create_parallel(points, len);
+  linear_kdtree lkt = lkt_create_heterogeneous(points, len);
 
   printf("\n\nlkt points:\n");
   print_points_codes(lkt.points, lkt.morton_codes, lkt.len);
@@ -188,39 +193,67 @@ static inline void test_lkt_parallel(const size_t len, const size_t threads) {
   lkt_delete(lkt);
 }
 
-static inline void test_lkt_compare(const size_t len, const size_t threads) {
-  cout << "test_lkt_compare" << endl;
+static inline void test_lkt_hetero(const size_t len, const size_t threads) {
+  cout << "test_lkt_hetero" << endl;
+  const ord_t min = 0.0;
+  const ord_t max = 100.0;
+  cout << "creating points...";
+  lkt_point* points = create_points(len, min, max);
+  cout << "creating lkt..." << endl;
+  const auto start = std::chrono::high_resolution_clock::now();
+  linear_kdtree lkt = lkt_create_heterogeneous(points, len);
+  const auto end = std::chrono::high_resolution_clock::now();
+  const auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+  lkt_delete(lkt);
+  cout << "time (ms): " << elapsed_ms << endl;
+}
+
+static inline void test_lkt_mimd(const size_t len, const size_t threads) {
+  cout << "test_lkt_mimd" << endl;
+  const ord_t min = 0.0;
+  const ord_t max = 100.0;
+  cout << "creating points...";
+  lkt_point* points = create_points(len, min, max);
+  cout << "creating lkt..." << endl;
+  const auto start = std::chrono::high_resolution_clock::now();
+  linear_kdtree lkt = lkt_create_mimd(points, len);
+  const auto end = std::chrono::high_resolution_clock::now();
+  const auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+  lkt_delete(lkt);
+  cout << "time (ms): " << elapsed_ms << endl;
+}
+
+static inline void test_lkt_pipeline(const size_t len, const size_t threads) {
+  cout << "test_lkt_pipeline" << endl;
+  const size_t PIPELINE_LEN = 10;
 
   const ord_t min = 0.0;
   const ord_t max = 100.0;
-
+  cout << "creating points...";
   lkt_point* points = create_points(len, min, max);
-  lkt_point* points2 = new lkt_point[len];
-  memcpy(points2, points, sizeof(lkt_point) * len);
 
-  cout << "created points:" << endl;
+  vector<pair<lkt_point*, size_t>> pointses;
+  pointses.push_back(make_pair(points, len));
+  for(size_t i = 0, end = PIPELINE_LEN - 1; i != end; ++i) {
+    lkt_point* morepoints = new lkt_point[len];
+    memcpy(morepoints, points, sizeof(lkt_point) * len);
+    pointses.push_back(make_pair(morepoints, len));
+  }
 
-/*
-  cout << "creating lkt:" << endl;
+  cout << "creating lkt..." << endl;
   const auto start = std::chrono::high_resolution_clock::now();
-  linear_kdtree lkt = lkt_create(points, len);
+
+  vector<linear_kdtree> lkts = lkt_create_pipelined(pointses);
+
   const auto end = std::chrono::high_resolution_clock::now();
   const auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-  cout << "sisd time (ms): " << elapsed_ms << endl;
-  lkt_delete(lkt);
-*/
 
-  cout << "creating parallel lkt:" << endl;
-  const auto pstart = std::chrono::high_resolution_clock::now();
-  linear_kdtree plkt = lkt_create_parallel(points2, len);
-  const auto pend = std::chrono::high_resolution_clock::now();
-  const auto pelapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(pend - pstart).count();
-  lkt_delete(plkt);
+//  for(auto i = lkts.begin(), end = lkts.end(); i != end; ++i)
+//    lkt_delete(*i);
 
-  cout << "mimd time (ms): " << pelapsed_ms << endl;
-
-  printf("\n");
+  cout << "time (ms): " << elapsed_ms << endl;
 }
+
 
 static bool point_comparator_x(const lkt_point& a, const lkt_point& b) {
   return a.x < b.x;
@@ -309,7 +342,9 @@ void(*test_funcs[])(const size_t, const size_t threads) = {
   test_quicksort_compare,
   test_lkt,
   test_lkt_parallel,
-  test_lkt_compare,
+  test_lkt_hetero,
+  test_lkt_mimd,
+  test_lkt_pipeline,
   test_fixlentree,
 };
 
@@ -321,8 +356,10 @@ const char* tests[][2] = {
   {"test_quicksort_compare"  , "benchmark quicksort_partition() vs parallel_quicksort_partition()"},  
   {"test_lkt"                , "test lkt_create()"},
   {"test_lkt_parallel"       , "test lkt_create_parallel()"},
-  {"test_lkt_compare"        , "benchmark lkt_create() vs lkt_create_parallel()"},
-  {"test_fixlentree"        , "test fixlentree structure"},
+  {"test_lkt_hetero"         ,  "benchmark lkt_create_heterogeneous()"},
+  {"test_lkt_mimd"           ,  "benchmark lkt_create_mimd()"},
+  {"test_lkt_pipeline"       ,  "benchmark lkt_create_pipelined() with 10"},
+  {"test_fixlentree"         , "test fixlentree structure"},
 };
 
 const size_t test_num = sizeof(tests) / (sizeof(const char*) * 2);
@@ -373,8 +410,8 @@ static void print_usage(const char* app_name) {
 }
 
 int main(const int argc, const char** argv) {
-  //  const time_t now = time(NULL);
-  const time_t now = 1422251841; // debug freeze at 10 000 000
+  const time_t now = time(NULL);
+//  const time_t now = 1422251841; // debug freeze at 10 000 000
 //  const time_t now = 1420954039; // debug fail with 100 elements!!
   cout << "seed: " << now << endl;
   srand(now); // constant seed for debugging
@@ -388,6 +425,5 @@ int main(const int argc, const char** argv) {
   tbb::task_scheduler_init init(args.threads); // +1 for the manager thread
 
   test_funcs[args.test_num](args.array_size, args.threads);
-  printf("\n");
   return 0;
 }
