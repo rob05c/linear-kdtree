@@ -254,6 +254,38 @@ static inline void test_lkt_pipeline(const size_t len, const size_t threads) {
   cout << "time (ms): " << elapsed_ms << endl;
 }
 
+static inline void test_lkt_unpipelined(const size_t len, const size_t threads) {
+  cout << "test_lkt_unpipelined" << endl;
+  const size_t PIPELINE_LEN = 10;
+
+  const ord_t min = 0.0;
+  const ord_t max = 100.0;
+  cout << "creating points...";
+  lkt_point* points = create_points(len, min, max);
+
+  vector<pair<lkt_point*, size_t>> pointses;
+  pointses.push_back(make_pair(points, len));
+  for(size_t i = 0, end = PIPELINE_LEN - 1; i != end; ++i) {
+    lkt_point* morepoints = new lkt_point[len];
+    memcpy(morepoints, points, sizeof(lkt_point) * len);
+    pointses.push_back(make_pair(morepoints, len));
+  }
+
+  cout << "creating lkt..." << endl;
+  const auto start = std::chrono::high_resolution_clock::now();
+
+  vector<linear_kdtree> lkts = lkt_create_pipelined(pointses);
+  for(size_t i = 0, end = PIPELINE_LEN; i != end; ++i)
+    lkts.push_back(lkt_create_heterogeneous(pointses[i].first, pointses[i].second));
+
+  const auto end = std::chrono::high_resolution_clock::now();
+  const auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+
+//  for(auto i = lkts.begin(), end = lkts.end(); i != end; ++i)
+//    lkt_delete(*i);
+
+  cout << "time (ms): " << elapsed_ms << endl;
+}
 
 static bool point_comparator_x(const lkt_point& a, const lkt_point& b) {
   return a.x < b.x;
@@ -345,6 +377,7 @@ void(*test_funcs[])(const size_t, const size_t threads) = {
   test_lkt_hetero,
   test_lkt_mimd,
   test_lkt_pipeline,
+  test_lkt_unpipelined,
   test_fixlentree,
 };
 
@@ -359,6 +392,7 @@ const char* tests[][2] = {
   {"test_lkt_hetero"         ,  "benchmark lkt_create_heterogeneous()"},
   {"test_lkt_mimd"           ,  "benchmark lkt_create_mimd()"},
   {"test_lkt_pipeline"       ,  "benchmark lkt_create_pipelined() with 10"},
+  {"test_lkt_unpipelined"    ,  "benchmark creating 10x trees without pipelining"},
   {"test_fixlentree"         , "test fixlentree structure"},
 };
 
