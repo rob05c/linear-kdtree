@@ -436,9 +436,9 @@ static void print_usage(const char* app_name) {
   printf("usage: %s test_num array_size threads\n", strlen(app_name) == 0 ? default_app_name : app_name);
   printf(" (threads is only used for heterogeneous test(s)\n");
   printf("\n");
-  printf("       num test            description\n");
+  printf("       num test                           description\n");
   for(size_t i = 0, end = test_num; i != end; ++i) {
-    printf("       %-3.1lu %-15.15s %s\n", i, tests[i][0], tests[i][1]);
+    printf("       %-3.1lu %-30.30s %s\n", i, tests[i][0], tests[i][1]);
   }
   printf("\n");
 }

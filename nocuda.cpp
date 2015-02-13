@@ -107,7 +107,7 @@ static void lkt_sort_mimd(lkt_point* points, size_t len,
                                               !xaxis, current_depth + 1, max_depth);});
 }
 
-static linear_kdtree lkt_create_mimd_codeless(lkt_point* points, size_t len) {
+linear_kdtree lkt_create_mimd_codeless(lkt_point* points, size_t len) {
   static_assert(sizeof(mortoncode_t) == 4, "mortoncode_t must be 32 bits");
   const size_t         PARALLEL_QUICKSORT_THREADS = 8;
   const unsigned short max_depth                  = sizeof(mortoncode_t) * CHAR_BIT;
@@ -168,32 +168,4 @@ linear_kdtree lkt_create_mimd(lkt_point* points, size_t len) {
   linear_kdtree tree = lkt_create_mimd_codeless(points, len);
   tree.morton_codes = lkt_create_mortoncodes_mimd(tree.points, tree.len, tree.split_points);
   return tree;
-}
-
-
-/// pipeline
-
-vector<linear_kdtree> lkt_create_pipelined(vector<pair<lkt_point*, size_t>> pointses) {
-  vector<promise<bool>> promises(pointses.size());
-  vector<future<bool>> futures;
-  for(vector<promise<bool>>::iterator i = promises.begin(), end = promises.end(); i != end; ++i)
-    futures.push_back(i->get_future());
-
-  vector<linear_kdtree> trees;
-
-  tbb::task_group tasks;
-  tasks.run([&]{
-      for(size_t i = 0, end = futures.size(); i != end; ++i) {
-        futures[i].wait();
-        linear_kdtree& tree = trees[i];
-        tree.morton_codes = lkt_create_mortoncodes_simd(tree.points, tree.len, tree.split_points);
-      }
-    });
-
-  for(size_t i = 0, end =  pointses.size(); i != end; ++i) {
-    trees.push_back(lkt_create_mimd_codeless(pointses[i].first, pointses[i].second));
-    promises[i].set_value(true);
-  }
-  tasks.wait();
-  return trees;
 }

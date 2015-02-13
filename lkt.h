@@ -40,6 +40,7 @@ mortoncode_t* lkt_create_mortoncodes_mimd(lkt_point* points, size_t len, const f
 
 linear_kdtree lkt_create_mimd(lkt_point* points, size_t len);
 linear_kdtree lkt_create_heterogeneous(lkt_point* points, size_t len);
+linear_kdtree lkt_create_mimd_codeless(lkt_point* points, size_t len);
 
 std::vector<linear_kdtree> lkt_create_pipelined(std::vector<std::pair<lkt_point*, size_t>> pointses);
 
